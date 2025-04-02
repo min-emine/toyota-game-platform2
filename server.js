@@ -3,28 +3,26 @@ const WebSocket = require('ws');
 const crypto = require('crypto');
 const express = require('express');
 const path = require('path');
+const cors = require('cors');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const users = {}; 
+const users = {};
 
 app.use(express.json());
-
+app.use(cors());
 
 app.use(express.static(path.join(__dirname, 'packages', 'oyun-merkezi', 'dist')));
-
 
 app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'packages', 'oyun-merkezi', 'dist', 'index.html'));
 });
 
-
 function hashData(data) {
   return crypto.createHash('sha256').update(data).digest('hex');
 }
-
 
 app.post('/register', (req, res) => {
   const { email, password } = req.body;
@@ -38,7 +36,6 @@ app.post('/register', (req, res) => {
   res.status(201).json({ message: 'Kullanıcı başarıyla kaydedildi.' });
 });
 
-
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -51,22 +48,13 @@ app.post('/login', (req, res) => {
   res.status(200).json({ message: 'Giriş başarılı.' });
 });
 
-
 wss.on('connection', (ws) => {
-  console.log('WebSocket connection established.');
-
   ws.on('message', (message) => {
-    console.log('Received:', message);
     ws.send(`Server received: ${message}`);
-  });
-
-  ws.on('close', () => {
-    console.log('WebSocket connection closed.');
   });
 });
 
-
-const PORT = 3002;
+const PORT = 3003;
 server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

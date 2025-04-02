@@ -3,6 +3,6 @@
   "packages": ["packages/*"],
   "version": "0.0.0",
   "npmClient": "npm",
-  "useWorkspaces": true,
-  "hoist": true
+  "hoist": true,
+  "useWorkspaces": true
 }
