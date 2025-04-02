@@ -16,22 +16,35 @@ export default function Login() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (!email || !password || (mode === 'signUp' && !confirmPassword)) {
-      setError('Please fill in all fields.');
+      setError('Lütfen tüm alanları doldurun.');
       return;
     }
     if (mode === 'signUp' && password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError('Şifreler eşleşmiyor.');
       return;
     }
     setError('');
-    console.log(
-      mode === 'signIn'
-        ? `Sign In successful: ${email}`
-        : `Sign Up successful: ${email}`
-    );
+
+    const endpoint = mode === 'signIn' ? '/login' : '/register';
+    const response = await fetch(`http://localhost:3001${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      setError(data.error || 'Bir hata oluştu.');
+      return;
+    }
+
+    console.log(data.message);
+    if (mode === 'signIn') {
+      window.location.href = '/dashboard'; 
+    }
   };
 
   return (
