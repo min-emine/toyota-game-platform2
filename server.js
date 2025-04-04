@@ -11,6 +11,7 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const usersFilePath = path.join(__dirname, 'users.json');
+const lobbiesFilePath = path.join(__dirname, 'lobbies.json');
 
 function loadUsers() {
   if (fs.existsSync(usersFilePath)) {
@@ -24,7 +25,36 @@ function saveUsers(users) {
   fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
 }
 
+function loadLobbies() {
+  if (fs.existsSync(lobbiesFilePath)) {
+    const data = fs.readFileSync(lobbiesFilePath);
+    return JSON.parse(data);
+  }
+  return {};
+}
+
+function saveLobbies(lobbies) {
+  fs.writeFileSync(lobbiesFilePath, JSON.stringify(lobbies, null, 2));
+}
+
+function generateLobbyCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function cleanUpExpiredLobbies() {
+  const now = Date.now();
+  for (const code in lobbies) {
+    if (now - lobbies[code].createdAt > 48 * 60 * 60 * 1000) {
+      delete lobbies[code];
+    }
+  }
+  saveLobbies(lobbies);
+}
+
 const users = loadUsers();
+const lobbies = loadLobbies();
+
+setInterval(cleanUpExpiredLobbies, 60 * 60 * 1000);
 
 app.use(express.json());
 app.use(cors());
@@ -62,6 +92,25 @@ app.post('/login', (req, res) => {
     return res.status(401).json({ error: 'Geçersiz e-posta veya şifre.' });
   }
   res.status(200).json({ message: 'Giriş başarılı.' });
+});
+
+app.post('/create-lobby', (req, res) => {
+  const { lobbyName } = req.body;
+  if (!lobbyName) {
+    return res.status(400).json({ error: 'Lobi adı gereklidir.' });
+  }
+  const lobbyCode = generateLobbyCode();
+  lobbies[lobbyCode] = {
+    name: lobbyName,
+    createdAt: Date.now(),
+  };
+  saveLobbies(lobbies);
+  res.status(201).json({ message: 'Lobi başarıyla oluşturuldu.', lobbyCode });
+});
+
+app.get('/lobbies', (req, res) => {
+  cleanUpExpiredLobbies();
+  res.status(200).json(lobbies);
 });
 
 wss.on('connection', (ws) => {

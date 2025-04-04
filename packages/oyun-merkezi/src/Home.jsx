@@ -7,11 +7,19 @@ import {
   AppBar,
   Toolbar,
   Typography,
-  Button,
   Avatar,
   Menu,
   MenuItem,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material';
 import GroupsIcon from '@mui/icons-material/Groups';
 
@@ -20,11 +28,22 @@ export default function Home() {
   const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'light');
   const [anchorElProfile, setAnchorElProfile] = useState(null);
   const [anchorElLobbies, setAnchorElLobbies] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [lobbyName, setLobbyName] = useState('');
+  const [lobbyCode, setLobbyCode] = useState('');
+  const [lobbies, setLobbies] = useState([]);
+  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+  const [joinLobbyCode, setJoinLobbyCode] = useState('');
+  const [currentLobby, setCurrentLobby] = useState(null);
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
   useEffect(() => {
     localStorage.setItem('themeMode', themeMode);
   }, [themeMode]);
+
+  useEffect(() => {
+    fetchLobbies();
+  }, []);
 
   if (!isAuthenticated) {
     navigate('/');
@@ -49,6 +68,71 @@ export default function Home() {
 
   const handleLobbiesClose = () => {
     setAnchorElLobbies(null);
+  };
+
+  const handleDialogOpen = () => {
+    setDialogOpen(true);
+    setAnchorElLobbies(null);
+  };
+
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+    setLobbyName('');
+    setLobbyCode('');
+  };
+
+  const handleCreateLobby = async () => {
+    if (!lobbyName.trim()) {
+      alert('Lobi adı gereklidir.');
+      return;
+    }
+    try {
+      const response = await fetch('http://localhost:3003/create-lobby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lobbyName }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || 'Lobi oluşturulamadı.');
+        return;
+      }
+      setLobbyCode(data.lobbyCode);
+      fetchLobbies();
+    } catch (error) {
+      alert('Sunucuya bağlanırken bir hata oluştu.');
+    }
+  };
+
+  const fetchLobbies = async () => {
+    try {
+      const response = await fetch('http://localhost:3003/lobbies');
+      const data = await response.json();
+      setLobbies(Object.entries(data));
+    } catch (error) {
+      alert('Lobiler alınırken bir hata oluştu.');
+    }
+  };
+
+  const handleJoinDialogOpen = () => {
+    setJoinDialogOpen(true);
+    setAnchorElLobbies(null);
+  };
+
+  const handleJoinDialogClose = () => {
+    setJoinDialogOpen(false);
+    setJoinLobbyCode('');
+  };
+
+  const handleJoinLobby = () => {
+    const lobby = lobbies.find(([code]) => code === joinLobbyCode);
+    if (lobby) {
+      setCurrentLobby(lobby);
+      alert(`Lobiye katıldınız: ${lobby[1].name}`);
+      handleJoinDialogClose();
+    } else {
+      alert('Geçersiz lobi kodu.');
+    }
   };
 
   const handleLogout = () => {
@@ -108,13 +192,66 @@ export default function Home() {
               open={Boolean(anchorElLobbies)}
               onClose={handleLobbiesClose}
             >
-              <MenuItem onClick={handleLobbiesClose}>Yeni Lobi Oluştur</MenuItem>
+              <MenuItem onClick={handleDialogOpen}>Yeni Lobi Oluştur</MenuItem>
+              <MenuItem onClick={handleJoinDialogOpen}>Lobiye Katıl</MenuItem>
             </Menu>
           </Toolbar>
         </AppBar>
+        <Dialog open={dialogOpen} onClose={handleDialogClose}>
+          <DialogTitle>Yeni Lobi Oluştur</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Lobi Adı"
+              fullWidth
+              value={lobbyName}
+              onChange={(e) => setLobbyName(e.target.value)}
+            />
+            {lobbyCode && (
+              <Typography sx={{ mt: 2 }}>
+                Lobi Kodu: <strong>{lobbyCode}</strong>
+              </Typography>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleDialogClose}>İptal</Button>
+            <Button onClick={handleCreateLobby} disabled={!!lobbyCode}>
+              Oluştur
+            </Button>
+          </DialogActions>
+        </Dialog>
+        <Dialog open={joinDialogOpen} onClose={handleJoinDialogClose}>
+          <DialogTitle>Lobiye Katıl</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Lobi Kodu"
+              fullWidth
+              value={joinLobbyCode}
+              onChange={(e) => setJoinLobbyCode(e.target.value)}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleJoinDialogClose}>İptal</Button>
+            <Button onClick={handleJoinLobby}>Katıl</Button>
+          </DialogActions>
+        </Dialog>
         <div style={{ textAlign: 'center', marginTop: '50px' }}>
           <h1>Hoş Geldiniz!</h1>
-          <p>Bu sayfa yalnızca giriş yapmış kullanıcılar tarafından görüntülenebilir.</p>
+          {currentLobby ? (
+            <p>Şu anda {currentLobby[1].name} adlı lobiye katıldınız.</p>
+          ) : (
+            <p>Bu sayfa yalnızca giriş yapmış kullanıcılar tarafından görüntülenebilir.</p>
+          )}
+          <List>
+            {lobbies.map(([code, lobby]) => (
+              <ListItem key={code}>
+                <ListItemText primary={lobby.name} secondary={`Kod: ${code}`} />
+              </ListItem>
+            ))}
+          </List>
         </div>
       </div>
     </AppTheme>
