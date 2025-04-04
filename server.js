@@ -4,12 +4,27 @@ const crypto = require('crypto');
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const users = {};
+const usersFilePath = path.join(__dirname, 'users.json');
+
+function loadUsers() {
+  if (fs.existsSync(usersFilePath)) {
+    const data = fs.readFileSync(usersFilePath);
+    return JSON.parse(data);
+  }
+  return {};
+}
+
+function saveUsers(users) {
+  fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
+}
+
+const users = loadUsers();
 
 app.use(express.json());
 app.use(cors());
@@ -33,6 +48,7 @@ app.post('/register', (req, res) => {
     return res.status(400).json({ error: 'Bu kullanıcı zaten mevcut.' });
   }
   users[email] = hashData(password);
+  saveUsers(users);
   res.status(201).json({ message: 'Kullanıcı başarıyla kaydedildi.' });
 });
 

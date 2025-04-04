@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -19,8 +19,12 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [themeMode, setThemeMode] = useState('light');
+  const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'light');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    localStorage.setItem('themeMode', themeMode);
+  }, [themeMode]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
