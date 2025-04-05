@@ -17,9 +17,15 @@ import {
   DialogActions,
   TextField,
   Button,
+  Drawer,
   List,
   ListItem,
   ListItemText,
+  Divider,
+  Card,
+  CardMedia,
+  CardContent,
+  Grid,
 } from '@mui/material';
 import GroupsIcon from '@mui/icons-material/Groups';
 
@@ -27,7 +33,7 @@ export default function Home() {
   const navigate = useNavigate();
   const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'light');
   const [anchorElProfile, setAnchorElProfile] = useState(null);
-  const [anchorElLobbies, setAnchorElLobbies] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [lobbyName, setLobbyName] = useState('');
   const [lobbyCode, setLobbyCode] = useState('');
@@ -35,6 +41,8 @@ export default function Home() {
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [joinLobbyCode, setJoinLobbyCode] = useState('');
   const [currentLobby, setCurrentLobby] = useState(null);
+  const [selectedLobby, setSelectedLobby] = useState(null);
+  const [hoveredGame, setHoveredGame] = useState(null); 
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
   useEffect(() => {
@@ -62,17 +70,17 @@ export default function Home() {
     setAnchorElProfile(null);
   };
 
-  const handleLobbiesClick = (event) => {
-    setAnchorElLobbies(event.currentTarget);
+  const handleDrawerOpen = () => {
+    setDrawerOpen(true);
   };
 
-  const handleLobbiesClose = () => {
-    setAnchorElLobbies(null);
+  const handleDrawerClose = () => {
+    setDrawerOpen(false);
   };
 
   const handleDialogOpen = () => {
     setDialogOpen(true);
-    setAnchorElLobbies(null);
+    setDrawerOpen(false);
   };
 
   const handleDialogClose = () => {
@@ -94,13 +102,13 @@ export default function Home() {
       });
       const data = await response.json();
       if (!response.ok) {
-        alert(data.error || 'Lobi oluşturulamadı.');
-        return;
+        throw new Error(data.error || 'Lobi oluşturulamadı.');
       }
       setLobbyCode(data.lobbyCode);
       fetchLobbies();
     } catch (error) {
-      alert('Sunucuya bağlanırken bir hata oluştu.');
+      console.error('Lobi oluşturulurken bir hata oluştu:', error);
+      alert(error.message || 'Lobi oluşturulamadı.');
     }
   };
 
@@ -108,27 +116,32 @@ export default function Home() {
     try {
       const response = await fetch('http://localhost:3003/lobbies');
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Lobiler alınamadı.');
+      }
       setLobbies(Object.entries(data));
     } catch (error) {
-      alert('Lobiler alınırken bir hata oluştu.');
+      console.error('Lobiler alınırken bir hata oluştu:', error);
+      alert(error.message || 'Lobiler alınamadı.');
     }
   };
 
-  const handleJoinDialogOpen = () => {
+  const handleJoinDialogOpen = (lobby) => {
+    setSelectedLobby(lobby);
     setJoinDialogOpen(true);
-    setAnchorElLobbies(null);
+    setDrawerOpen(false);
   };
 
   const handleJoinDialogClose = () => {
     setJoinDialogOpen(false);
     setJoinLobbyCode('');
+    setSelectedLobby(null);
   };
 
   const handleJoinLobby = () => {
-    const lobby = lobbies.find(([code]) => code === joinLobbyCode);
-    if (lobby) {
-      setCurrentLobby(lobby);
-      alert(`Lobiye katıldınız: ${lobby[1].name}`);
+    if (selectedLobby && joinLobbyCode === selectedLobby[0]) {
+      setCurrentLobby(selectedLobby);
+      alert(`Lobiye katıldınız: ${selectedLobby[1].name}`);
       handleJoinDialogClose();
     } else {
       alert('Geçersiz lobi kodu.');
@@ -140,9 +153,28 @@ export default function Home() {
     navigate('/');
   };
 
+  const games = [
+    { id: 1, name: 'Oyun 1', image: '/images/1.jpg' },
+    { id: 2, name: 'Oyun 2', image: '/images/2.jpg' },
+    { id: 3, name: 'Oyun 3', image: '/images/3.jpg' },
+  ];
+
+  const handleGameClick = (gameId) => {
+    navigate(`/game-details/${gameId}`); 
+  };
+
   return (
     <AppTheme mode={themeMode}>
-      <div>
+      <div
+        style={{
+          backgroundImage: `url(${hoveredGame ? hoveredGame.image : '/images/background.jpg'})`, // Dinamik arka plan
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          minHeight: '100vh',
+          transition: 'background-image 0.5s ease', 
+        }}
+      >
         <AppBar
           position="static"
           sx={{
@@ -182,21 +214,30 @@ export default function Home() {
             </Menu>
             <IconButton
               color="inherit"
-              onClick={handleLobbiesClick}
+              onClick={handleDrawerOpen}
               sx={{ ml: 2 }}
             >
               <GroupsIcon />
             </IconButton>
-            <Menu
-              anchorEl={anchorElLobbies}
-              open={Boolean(anchorElLobbies)}
-              onClose={handleLobbiesClose}
-            >
-              <MenuItem onClick={handleDialogOpen}>Yeni Lobi Oluştur</MenuItem>
-              <MenuItem onClick={handleJoinDialogOpen}>Lobiye Katıl</MenuItem>
-            </Menu>
           </Toolbar>
         </AppBar>
+        <Drawer anchor="right" open={drawerOpen} onClose={handleDrawerClose}>
+          <List sx={{ width: 250 }}>
+            <ListItem>
+              <Typography variant="h6">Lobiler</Typography>
+            </ListItem>
+            <Divider />
+            {lobbies.map(([code, lobby]) => (
+              <ListItem key={code} button onClick={() => handleJoinDialogOpen([code, lobby])}>
+                <ListItemText primary={lobby.name} secondary={`Kod: ${code}`} />
+              </ListItem>
+            ))}
+            <Divider />
+            <ListItem button onClick={handleDialogOpen}>
+              <ListItemText primary="Yeni Lobi Oluştur" />
+            </ListItem>
+          </List>
+        </Drawer>
         <Dialog open={dialogOpen} onClose={handleDialogClose}>
           <DialogTitle>Yeni Lobi Oluştur</DialogTitle>
           <DialogContent>
@@ -224,6 +265,7 @@ export default function Home() {
         <Dialog open={joinDialogOpen} onClose={handleJoinDialogClose}>
           <DialogTitle>Lobiye Katıl</DialogTitle>
           <DialogContent>
+            <Typography>Lobi Adı: {selectedLobby?.[1].name}</Typography>
             <TextField
               autoFocus
               margin="dense"
@@ -245,13 +287,33 @@ export default function Home() {
           ) : (
             <p>Bu sayfa yalnızca giriş yapmış kullanıcılar tarafından görüntülenebilir.</p>
           )}
-          <List>
-            {lobbies.map(([code, lobby]) => (
-              <ListItem key={code}>
-                <ListItemText primary={lobby.name} secondary={`Kod: ${code}`} />
-              </ListItem>
+          <Grid container spacing={2} justifyContent="center" sx={{ mt: 4 }}>
+            {games.map((game) => (
+              <Grid
+                item
+                key={game.id}
+                xs={12}
+                sm={6}
+                md={4}
+                onMouseEnter={() => setHoveredGame(game)} 
+                onMouseLeave={() => setHoveredGame(null)} 
+                onClick={() => handleGameClick(game.id)} 
+                style={{ cursor: 'pointer' }}
+              >
+                <Card>
+                  <CardMedia
+                    component="img"
+                    height="140"
+                    image={game.image}
+                    alt={game.name}
+                  />
+                  <CardContent>
+                    <Typography variant="h6">{game.name}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
             ))}
-          </List>
+          </Grid>
         </div>
       </div>
     </AppTheme>

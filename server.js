@@ -26,15 +26,23 @@ function saveUsers(users) {
 }
 
 function loadLobbies() {
-  if (fs.existsSync(lobbiesFilePath)) {
-    const data = fs.readFileSync(lobbiesFilePath);
-    return JSON.parse(data);
+  try {
+    if (fs.existsSync(lobbiesFilePath)) {
+      const data = fs.readFileSync(lobbiesFilePath, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Lobiler yüklenirken bir hata oluştu:', error);
   }
   return {};
 }
 
 function saveLobbies(lobbies) {
-  fs.writeFileSync(lobbiesFilePath, JSON.stringify(lobbies, null, 2));
+  try {
+    fs.writeFileSync(lobbiesFilePath, JSON.stringify(lobbies, null, 2));
+  } catch (error) {
+    console.error('Lobiler kaydedilirken bir hata oluştu:', error);
+  }
 }
 
 function generateLobbyCode() {
@@ -95,22 +103,32 @@ app.post('/login', (req, res) => {
 });
 
 app.post('/create-lobby', (req, res) => {
-  const { lobbyName } = req.body;
-  if (!lobbyName) {
-    return res.status(400).json({ error: 'Lobi adı gereklidir.' });
+  try {
+    const { lobbyName } = req.body;
+    if (!lobbyName) {
+      return res.status(400).json({ error: 'Lobi adı gereklidir.' });
+    }
+    const lobbyCode = generateLobbyCode();
+    lobbies[lobbyCode] = {
+      name: lobbyName,
+      createdAt: Date.now(),
+    };
+    saveLobbies(lobbies);
+    res.status(201).json({ message: 'Lobi başarıyla oluşturuldu.', lobbyCode });
+  } catch (error) {
+    console.error('Lobi oluşturulurken bir hata oluştu:', error);
+    res.status(500).json({ error: 'Lobi oluşturulamadı. Sunucu hatası.' });
   }
-  const lobbyCode = generateLobbyCode();
-  lobbies[lobbyCode] = {
-    name: lobbyName,
-    createdAt: Date.now(),
-  };
-  saveLobbies(lobbies);
-  res.status(201).json({ message: 'Lobi başarıyla oluşturuldu.', lobbyCode });
 });
 
 app.get('/lobbies', (req, res) => {
-  cleanUpExpiredLobbies();
-  res.status(200).json(lobbies);
+  try {
+    cleanUpExpiredLobbies();
+    res.status(200).json(lobbies);
+  } catch (error) {
+    console.error('Lobiler alınırken bir hata oluştu:', error);
+    res.status(500).json({ error: 'Lobiler alınamadı. Sunucu hatası.' });
+  }
 });
 
 wss.on('connection', (ws) => {
