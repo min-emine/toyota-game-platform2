@@ -165,16 +165,7 @@ export default function Home() {
 
   return (
     <AppTheme mode={themeMode}>
-      <div
-        style={{
-          backgroundImage: `url(${hoveredGame ? hoveredGame.image : '/images/background.jpg'})`, // Dinamik arka plan
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          minHeight: '100vh',
-          transition: 'background-image 0.5s ease', 
-        }}
-      >
+      <div>
         <AppBar
           position="static"
           sx={{
@@ -287,33 +278,52 @@ export default function Home() {
           ) : (
             <p>Bu sayfa yalnızca giriş yapmış kullanıcılar tarafından görüntülenebilir.</p>
           )}
-          <Grid container spacing={2} justifyContent="center" sx={{ mt: 4 }}>
-            {games.map((game) => (
-              <Grid
-                item
-                key={game.id}
-                xs={12}
-                sm={6}
-                md={4}
-                onMouseEnter={() => setHoveredGame(game)} 
-                onMouseLeave={() => setHoveredGame(null)} 
-                onClick={() => handleGameClick(game.id)} 
-                style={{ cursor: 'pointer' }}
-              >
-                <Card>
-                  <CardMedia
-                    component="img"
-                    height="140"
-                    image={game.image}
-                    alt={game.name}
-                  />
-                  <CardContent>
-                    <Typography variant="h6">{game.name}</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+          <div
+            style={{
+              width: '1024px',
+              height: '576px',
+              margin: '0 auto',
+              backgroundImage: `url(${hoveredGame ? hoveredGame.image : '/images/background.jpg'})`,
+              backgroundSize: 'contain',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              display: 'flex',
+              justifyContent: 'center', // Kartları yatayda ortalamaya devam ediyor
+              alignItems: 'flex-end', // Kartları dikeyde alt tarafa yaklaştırır
+              borderRadius: '10px',
+              overflow: 'hidden',
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+              paddingBottom: '20px', // Kartların altına biraz boşluk ekler
+            }}
+          >
+            <Grid container spacing={2} justifyContent="center">
+              {games.map((game) => (
+                <Grid
+                  item
+                  key={game.id}
+                  xs={12}
+                  sm={6}
+                  md={4}
+                  onMouseEnter={() => setHoveredGame(game)}
+                  onMouseLeave={() => setHoveredGame(null)}
+                  onClick={() => handleGameClick(game.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <Card>
+                    <CardMedia
+                      component="img"
+                      height="140"
+                      image={game.image}
+                      alt={game.name}
+                    />
+                    <CardContent>
+                      <Typography variant="h6">{game.name}</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </div>
         </div>
       </div>
     </AppTheme>
