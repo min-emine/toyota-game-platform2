@@ -114,11 +114,11 @@ export default function Home() {
 
   const fetchLobbies = async () => {
     try {
-      const response = await fetch('http://localhost:3003/lobbies');
-      const data = await response.json();
+      const response = await fetch('http://localhost:3003/lobbies'); 
       if (!response.ok) {
-        throw new Error(data.error || 'Lobiler alınamadı.');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+      const data = await response.json();
       setLobbies(Object.entries(data));
     } catch (error) {
       console.error('Lobiler alınırken bir hata oluştu:', error);
@@ -153,10 +153,16 @@ export default function Home() {
     navigate('/');
   };
 
-  const games = [
+  const gamesWithBackgroundEffect = [
     { id: 1, name: 'Oyun 1', image: '/images/1.jpg' },
     { id: 2, name: 'Oyun 2', image: '/images/2.jpg' },
     { id: 3, name: 'Oyun 3', image: '/images/3.jpg' },
+  ];
+
+  const gamesWithoutBackgroundEffect = [
+    { id: 4, name: 'Oyun 4', image: '/images/4.jpg' },
+    { id: 5, name: 'Oyun 5', image: '/images/5.jpg' },
+    { id: 6, name: 'Oyun 6', image: '/images/6.jpg' },
   ];
 
   const handleGameClick = (gameId) => {
@@ -205,7 +211,7 @@ export default function Home() {
             </Menu>
             <IconButton
               color="inherit"
-              onClick={handleDrawerOpen}
+              onClick={handleDrawerOpen} 
               sx={{ ml: 2 }}
             >
               <GroupsIcon />
@@ -219,7 +225,7 @@ export default function Home() {
             </ListItem>
             <Divider />
             {lobbies.map(([code, lobby]) => (
-              <ListItem key={code} button onClick={() => handleJoinDialogOpen([code, lobby])}>
+              <ListItem key={code} button>
                 <ListItemText primary={lobby.name} secondary={`Kod: ${code}`} />
               </ListItem>
             ))}
@@ -253,31 +259,7 @@ export default function Home() {
             </Button>
           </DialogActions>
         </Dialog>
-        <Dialog open={joinDialogOpen} onClose={handleJoinDialogClose}>
-          <DialogTitle>Lobiye Katıl</DialogTitle>
-          <DialogContent>
-            <Typography>Lobi Adı: {selectedLobby?.[1].name}</Typography>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Lobi Kodu"
-              fullWidth
-              value={joinLobbyCode}
-              onChange={(e) => setJoinLobbyCode(e.target.value)}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleJoinDialogClose}>İptal</Button>
-            <Button onClick={handleJoinLobby}>Katıl</Button>
-          </DialogActions>
-        </Dialog>
-        <div style={{ textAlign: 'center', marginTop: '50px' }}>
-          <h1>Hoş Geldiniz!</h1>
-          {currentLobby ? (
-            <p>Şu anda {currentLobby[1].name} adlı lobiye katıldınız.</p>
-          ) : (
-            <p>Bu sayfa yalnızca giriş yapmış kullanıcılar tarafından görüntülenebilir.</p>
-          )}
+        <div style={{ padding: '20px' }}>
           <div
             style={{
               width: '1024px',
@@ -288,16 +270,16 @@ export default function Home() {
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
               display: 'flex',
-              justifyContent: 'center', // Kartları yatayda ortalamaya devam ediyor
-              alignItems: 'flex-end', // Kartları dikeyde alt tarafa yaklaştırır
+              justifyContent: 'center',
+              alignItems: 'flex-end',
               borderRadius: '10px',
               overflow: 'hidden',
               boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-              paddingBottom: '20px', // Kartların altına biraz boşluk ekler
+              paddingBottom: '20px',
             }}
           >
             <Grid container spacing={2} justifyContent="center">
-              {games.map((game) => (
+              {gamesWithBackgroundEffect.map((game) => (
                 <Grid
                   item
                   key={game.id}
@@ -306,6 +288,46 @@ export default function Home() {
                   md={4}
                   onMouseEnter={() => setHoveredGame(game)}
                   onMouseLeave={() => setHoveredGame(null)}
+                  onClick={() => handleGameClick(game.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <Card>
+                    <CardMedia
+                      component="img"
+                      height="140"
+                      image={game.image}
+                      alt={game.name}
+                    />
+                    <CardContent>
+                      <Typography variant="h6">{game.name}</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </div>
+          <div
+            style={{
+              width: '1024px',
+              margin: '0 auto',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: '10px',
+              overflow: 'hidden',
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+              padding: '20px',
+              backgroundColor: themeMode === 'dark' ? '#333' : '#f9f9f9',
+            }}
+          >
+            <Grid container spacing={2} justifyContent="center">
+              {gamesWithoutBackgroundEffect.map((game) => (
+                <Grid
+                  item
+                  key={game.id}
+                  xs={12}
+                  sm={6}
+                  md={4}
                   onClick={() => handleGameClick(game.id)}
                   style={{ cursor: 'pointer' }}
                 >

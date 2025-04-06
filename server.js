@@ -124,7 +124,7 @@ app.post('/create-lobby', (req, res) => {
 app.get('/lobbies', (req, res) => {
   try {
     cleanUpExpiredLobbies();
-    res.status(200).json(lobbies);
+    res.status(200).json(lobbies); // JSON döndürdüğünden emin olun
   } catch (error) {
     console.error('Lobiler alınırken bir hata oluştu:', error);
     res.status(500).json({ error: 'Lobiler alınamadı. Sunucu hatası.' });
