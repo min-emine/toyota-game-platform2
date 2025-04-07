@@ -119,7 +119,8 @@ export default function Home() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      setLobbies(Object.entries(data));
+      console.log('Lobiler:', data); 
+      setLobbies(Object.entries(data)); 
     } catch (error) {
       console.error('Lobiler alınırken bir hata oluştu:', error);
       alert(error.message || 'Lobiler alınamadı.');
@@ -163,6 +164,12 @@ export default function Home() {
     { id: 4, name: 'Oyun 4', image: '/images/4.jpg' },
     { id: 5, name: 'Oyun 5', image: '/images/5.jpg' },
     { id: 6, name: 'Oyun 6', image: '/images/6.jpg' },
+  ];
+
+  const additionalGames = [
+    { id: 7, name: 'Oyun 7', image: '/images/7.jpg' },
+    { id: 8, name: 'Oyun 8', image: '/images/8.jpg' },
+    { id: 9, name: 'Oyun 9', image: '/images/9.jpg' },
   ];
 
   const handleGameClick = (gameId) => {
@@ -224,11 +231,17 @@ export default function Home() {
               <Typography variant="h6">Lobiler</Typography>
             </ListItem>
             <Divider />
-            {lobbies.map(([code, lobby]) => (
-              <ListItem key={code} button>
-                <ListItemText primary={lobby.name} secondary={`Kod: ${code}`} />
+            {lobbies.length > 0 ? (
+              lobbies.map(([code, lobby]) => (
+                <ListItem key={code}>
+                  <ListItemText primary={lobby.name} secondary={`Kod: ${code}`} />
+                </ListItem>
+              ))
+            ) : (
+              <ListItem>
+                <ListItemText primary="Hiçbir lobi bulunamadı." />
               </ListItem>
-            ))}
+            )}
             <Divider />
             <ListItem button onClick={handleDialogOpen}>
               <ListItemText primary="Yeni Lobi Oluştur" />
@@ -265,6 +278,7 @@ export default function Home() {
               width: '1024px',
               height: '576px',
               margin: '0 auto',
+              marginTop: '20px', 
               backgroundImage: `url(${hoveredGame ? hoveredGame.image : '/images/background.jpg'})`,
               backgroundSize: 'contain',
               backgroundPosition: 'center',
@@ -310,6 +324,7 @@ export default function Home() {
             style={{
               width: '1024px',
               margin: '0 auto',
+              marginTop: '40px', 
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
@@ -322,6 +337,47 @@ export default function Home() {
           >
             <Grid container spacing={2} justifyContent="center">
               {gamesWithoutBackgroundEffect.map((game) => (
+                <Grid
+                  item
+                  key={game.id}
+                  xs={12}
+                  sm={6}
+                  md={4}
+                  onClick={() => handleGameClick(game.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <Card>
+                    <CardMedia
+                      component="img"
+                      height="140"
+                      image={game.image}
+                      alt={game.name}
+                    />
+                    <CardContent>
+                      <Typography variant="h6">{game.name}</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </div>
+          <div
+            style={{
+              width: '1024px',
+              margin: '0 auto',
+              marginTop: '40px', 
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: '10px',
+              overflow: 'hidden',
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+              padding: '20px',
+              backgroundColor: themeMode === 'dark' ? '#444' : '#f0f0f0',
+            }}
+          >
+            <Grid container spacing={2} justifyContent="center">
+              {additionalGames.map((game) => (
                 <Grid
                   item
                   key={game.id}

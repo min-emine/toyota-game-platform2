@@ -67,16 +67,6 @@ setInterval(cleanUpExpiredLobbies, 60 * 60 * 1000);
 app.use(express.json());
 app.use(cors());
 
-app.use(express.static(path.join(__dirname, 'packages', 'oyun-merkezi', 'dist')));
-
-app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, 'packages', 'oyun-merkezi', 'dist', 'index.html'));
-});
-
-function hashData(data) {
-  return crypto.createHash('sha256').update(data).digest('hex');
-}
-
 app.post('/register', (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -123,13 +113,23 @@ app.post('/create-lobby', (req, res) => {
 
 app.get('/lobbies', (req, res) => {
   try {
-    cleanUpExpiredLobbies();
-    res.status(200).json(lobbies); // JSON döndürdüğünden emin olun
+    cleanUpExpiredLobbies(); 
+    res.status(200).json(lobbies); 
   } catch (error) {
     console.error('Lobiler alınırken bir hata oluştu:', error);
     res.status(500).json({ error: 'Lobiler alınamadı. Sunucu hatası.' });
   }
 });
+
+app.use(express.static(path.join(__dirname, 'packages', 'oyun-merkezi', 'dist')));
+
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'packages', 'oyun-merkezi', 'dist', 'index.html'));
+});
+
+function hashData(data) {
+  return crypto.createHash('sha256').update(data).digest('hex');
+}
 
 wss.on('connection', (ws) => {
   ws.on('message', (message) => {

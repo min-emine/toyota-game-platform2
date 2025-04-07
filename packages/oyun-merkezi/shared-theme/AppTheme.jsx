@@ -8,7 +8,7 @@ const AppTheme = ({ children, mode = 'light' }) => {
       mode,
     },
     typography: {
-      fontFamily: '"Underdog", system-ui', // Underdog yazı tipini varsayılan yapıyoruz
+      fontFamily: '"Underdog", system-ui', 
     },
   });
 
