@@ -75,9 +75,10 @@ app.post('/register', (req, res) => {
   if (users[email]) {
     return res.status(400).json({ error: 'Bu kullanıcı zaten mevcut.' });
   }
-  users[email] = hashData(password);
+  const userId = crypto.randomBytes(8).toString('hex'); 
+  users[email] = { password: hashData(password), userId }; 
   saveUsers(users);
-  res.status(201).json({ message: 'Kullanıcı başarıyla kaydedildi.' });
+  res.status(201).json({ message: 'Kullanıcı başarıyla kaydedildi.', userId });
 });
 
 app.post('/login', (req, res) => {
@@ -85,11 +86,11 @@ app.post('/login', (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ error: 'E-posta ve şifre gereklidir.' });
   }
-  const hashedPassword = hashData(password);
-  if (users[email] !== hashedPassword) {
+  const user = users[email];
+  if (!user || user.password !== hashData(password)) {
     return res.status(401).json({ error: 'Geçersiz e-posta veya şifre.' });
   }
-  res.status(200).json({ message: 'Giriş başarılı.' });
+  res.status(200).json({ message: 'Giriş başarılı.', userId: user.userId });
 });
 
 app.post('/create-lobby', (req, res) => {
@@ -108,6 +109,51 @@ app.post('/create-lobby', (req, res) => {
   } catch (error) {
     console.error('Lobi oluşturulurken bir hata oluştu:', error);
     res.status(500).json({ error: 'Lobi oluşturulamadı. Sunucu hatası.' });
+  }
+});
+
+app.post('/join-lobby', (req, res) => {
+  try {
+    const { lobbyCode, userId } = req.body; 
+    if (!lobbyCode || !userId) {
+      return res.status(400).json({ error: 'Lobi kodu ve kullanıcı ID gereklidir.' });
+    }
+    if (!lobbies[lobbyCode]) {
+      return res.status(404).json({ error: 'Lobi bulunamadı.' });
+    }
+    const lobby = lobbies[lobbyCode];
+    if (!lobby.participants) {
+      lobby.participants = []; 
+    }
+    if (!lobby.participants.includes(userId)) {
+      lobby.participants.push(userId); 
+      saveLobbies(lobbies); 
+    }
+    res.status(200).json({ message: 'Lobiye başarıyla katıldınız.', lobby });
+  } catch (error) {
+    console.error('Lobiye katılma sırasında bir hata oluştu:', error);
+    res.status(500).json({ error: 'Lobiye katılma işlemi başarısız oldu.' });
+  }
+});
+
+app.post('/leave-lobby', (req, res) => {
+  try {
+    const { lobbyCode, userId } = req.body; 
+    if (!lobbyCode || !userId) {
+      return res.status(400).json({ error: 'Lobi kodu ve kullanıcı ID gereklidir.' });
+    }
+    if (!lobbies[lobbyCode]) {
+      return res.status(404).json({ error: 'Lobi bulunamadı.' });
+    }
+    const lobby = lobbies[lobbyCode];
+    if (lobby.participants) {
+      lobby.participants = lobby.participants.filter((participant) => participant !== userId);
+      saveLobbies(lobbies); 
+    }
+    res.status(200).json({ message: 'Lobiden başarıyla çıkıldı.', lobby });
+  } catch (error) {
+    console.error('Lobiden çıkış sırasında bir hata oluştu:', error);
+    res.status(500).json({ error: 'Lobiden çıkış işlemi başarısız oldu.' });
   }
 });
 

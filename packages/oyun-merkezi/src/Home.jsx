@@ -30,6 +30,7 @@ import {
 import GroupsIcon from '@mui/icons-material/Groups';
 
 export default function Home() {
+  const userId = localStorage.getItem('userId'); 
   const navigate = useNavigate();
   const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'light');
   const [anchorElProfile, setAnchorElProfile] = useState(null);
@@ -139,13 +140,47 @@ export default function Home() {
     setSelectedLobby(null);
   };
 
-  const handleJoinLobby = () => {
-    if (selectedLobby && joinLobbyCode === selectedLobby[0]) {
-      setCurrentLobby(selectedLobby);
-      alert(`Lobiye katıldınız: ${selectedLobby[1].name}`);
+  const handleJoinLobby = async () => {
+    if (!joinLobbyCode.trim()) {
+      alert('Lobi kodu gereklidir.');
+      return;
+    }
+    try {
+      const response = await fetch('http://localhost:3003/join-lobby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lobbyCode: joinLobbyCode, userId }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Lobiye katılma işlemi başarısız oldu.');
+      }
+      setCurrentLobby(data.lobby);
+      alert(`Lobiye başarıyla katıldınız: ${data.lobby.name}`);
       handleJoinDialogClose();
-    } else {
-      alert('Geçersiz lobi kodu.');
+    } catch (error) {
+      console.error('Lobiye katılma sırasında bir hata oluştu:', error);
+      alert(error.message || 'Lobiye katılma işlemi başarısız oldu.');
+    }
+  };
+
+  const handleLeaveLobby = async (lobbyCode) => {
+    if (!window.confirm('Lobiden çıkmak istiyor musunuz?')) return;
+    try {
+      const response = await fetch('http://localhost:3003/leave-lobby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lobbyCode, userId }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Lobiden çıkış işlemi başarısız oldu.');
+      }
+      setCurrentLobby(null); 
+      alert('Lobiden başarıyla çıkıldı.');
+    } catch (error) {
+      console.error('Lobiden çıkış sırasında bir hata oluştu:', error);
+      alert(error.message || 'Lobiden çıkış işlemi başarısız oldu.');
     }
   };
 
@@ -233,8 +268,26 @@ export default function Home() {
             <Divider />
             {lobbies.length > 0 ? (
               lobbies.map(([code, lobby]) => (
-                <ListItem key={code}>
-                  <ListItemText primary={lobby.name} secondary={`Kod: ${code}`} />
+                <ListItem
+                  key={code}
+                  button
+                  onClick={() =>
+                    currentLobby?.name === lobby.name
+                      ? handleLeaveLobby(code) 
+                      : handleJoinDialogOpen([code, lobby]) 
+                  }
+                  sx={{
+                    backgroundColor: currentLobby?.name === lobby.name ? 'lightgreen' : 'inherit',
+                  }}
+                >
+                  <ListItemText
+                    primary={lobby.name}
+                    secondary={
+                      currentLobby?.name === lobby.name
+                        ? `Katılımcılar: ${lobby.participants?.length || 0}`
+                        : null
+                    }
+                  />
                 </ListItem>
               ))
             ) : (
@@ -270,6 +323,24 @@ export default function Home() {
             <Button onClick={handleCreateLobby} disabled={!!lobbyCode}>
               Oluştur
             </Button>
+          </DialogActions>
+        </Dialog>
+        <Dialog open={joinDialogOpen} onClose={handleJoinDialogClose}>
+          <DialogTitle>Lobiye Katıl</DialogTitle>
+          <DialogContent>
+            <Typography>Lobi Adı: {selectedLobby?.[1].name}</Typography>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Lobi Kodu"
+              fullWidth
+              value={joinLobbyCode}
+              onChange={(e) => setJoinLobbyCode(e.target.value)}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleJoinDialogClose}>İptal</Button>
+            <Button onClick={handleJoinLobby}>Katıl</Button>
           </DialogActions>
         </Dialog>
         <div style={{ padding: '20px' }}>

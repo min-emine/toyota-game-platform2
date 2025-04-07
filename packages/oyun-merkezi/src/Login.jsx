@@ -55,6 +55,7 @@ export default function Login() {
       console.log(data.message);
       if (mode === 'signIn') {
         localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userId', data.userId); 
         navigate('/home');
       } else {
         setError('Kayıt başarılı! Şimdi giriş yapabilirsiniz.');
