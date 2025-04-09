@@ -111,7 +111,7 @@ export default function GameDetails() {
             <Button variant="outlined" onClick={() => navigate('/home')}>
               Geri Dön
             </Button>
-            <Button variant="contained" color="primary" onClick={() => alert('Oyuna gidiliyor...')}>
+            <Button variant="contained" color="primary" onClick={() => navigate('/game')}>
               Oyuna Git
             </Button>
           </Box>
