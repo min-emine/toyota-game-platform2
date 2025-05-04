@@ -4,19 +4,21 @@
 
 1. **Gerekli Bağımlılıkları Yükleyin**:
    - Proje dizininde aşağıdaki komutları çalıştırarak bağımlılıkları yükleyin:
-
+     ```bash
      npm install
      npm run start
-
-
+     ```
 2. **Sunucuyu Başlatın**:
    - Sunucu, `server.js` dosyası üzerinden çalıştırılır. Aşağıdaki komut ile başlatabilirsiniz:
+     ```bash
      node server.js
-
+     ```
 
 3. **İstemciyi Başlatın**:
    - İstemci, `oyun-merkezi` paketinde çalıştırılır. Aşağıdaki komut ile başlatabilirsiniz:
+     ```bash
      npm run start
+     ```
 
 
 4. **Erişim**:
