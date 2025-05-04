@@ -24,13 +24,16 @@ import {
   Divider,
   Card,
   CardMedia,
-  CardContent,
   Grid,
+  Box,
 } from '@mui/material';
 import GroupsIcon from '@mui/icons-material/Groups';
+import { io } from "socket.io-client"; 
 
 export default function Home() {
   const userId = localStorage.getItem('userId'); 
+  const avatar = localStorage.getItem('avatar'); 
+  const username = localStorage.getItem('username');
   const navigate = useNavigate();
   const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'light');
   const [anchorElProfile, setAnchorElProfile] = useState(null);
@@ -43,7 +46,30 @@ export default function Home() {
   const [joinLobbyCode, setJoinLobbyCode] = useState('');
   const [currentLobby, setCurrentLobby] = useState(null);
   const [selectedLobby, setSelectedLobby] = useState(null);
-  const [hoveredGame, setHoveredGame] = useState(null); 
+  const [chatMessages, setChatMessages] = useState([]); 
+  const [newMessage, setNewMessage] = useState('');
+  const [socket, setSocket] = useState(null);
+  const [drawerVisible, setDrawerVisible] = useState(true); 
+
+  const gamesWithBackgroundEffect = [
+    { id: 1, name: 'Oyun 1', image: '/images/1.jpg' },
+    { id: 2, name: 'Oyun 2', image: '/images/2.jpg' },
+    { id: 3, name: 'Oyun 3', image: '/images/3.jpg' },
+  ];
+
+  const gamesWithoutBackgroundEffect = [
+    { id: 4, name: 'Oyun 4', image: '/images/4.jpg' },
+    { id: 5, name: 'Oyun 5', image: '/images/5.jpg' },
+    { id: 6, name: 'Oyun 6', image: '/images/6.jpg' },
+  ];
+
+  const additionalGames = [
+    { id: 7, name: 'Oyun 7', image: '/images/7.jpg' },
+    { id: 8, name: 'Oyun 8', image: '/images/8.jpg' },
+    { id: 9, name: 'Oyun 9', image: '/images/9.jpg' },
+  ];
+
+  const [hoveredGame, setHoveredGame] = useState(gamesWithBackgroundEffect[0]); 
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
   useEffect(() => {
@@ -53,6 +79,25 @@ export default function Home() {
   useEffect(() => {
     fetchLobbies();
   }, []);
+
+  useEffect(() => {
+   
+    const newSocket = io('http://localhost:3003');
+    setSocket(newSocket);
+
+  
+    newSocket.on('chatMessage', (message) => {
+      setChatMessages((prevMessages) => [...prevMessages, message]);
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+
+  const toggleDrawerVisibility = () => {
+    setDrawerVisible((prev) => !prev); 
+  };
 
   if (!isAuthenticated) {
     navigate('/');
@@ -186,295 +231,342 @@ export default function Home() {
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('avatar'); 
     navigate('/');
   };
-
-  const gamesWithBackgroundEffect = [
-    { id: 1, name: 'Oyun 1', image: '/images/1.jpg' },
-    { id: 2, name: 'Oyun 2', image: '/images/2.jpg' },
-    { id: 3, name: 'Oyun 3', image: '/images/3.jpg' },
-  ];
-
-  const gamesWithoutBackgroundEffect = [
-    { id: 4, name: 'Oyun 4', image: '/images/4.jpg' },
-    { id: 5, name: 'Oyun 5', image: '/images/5.jpg' },
-    { id: 6, name: 'Oyun 6', image: '/images/6.jpg' },
-  ];
-
-  const additionalGames = [
-    { id: 7, name: 'Oyun 7', image: '/images/7.jpg' },
-    { id: 8, name: 'Oyun 8', image: '/images/8.jpg' },
-    { id: 9, name: 'Oyun 9', image: '/images/9.jpg' },
-  ];
 
   const handleGameClick = (gameId) => {
     navigate(`/game-details/${gameId}`); 
   };
 
+  const handleSendMessage = () => {
+    if (newMessage.trim() && socket) {
+      const message = {
+        userId,
+        username: localStorage.getItem('username') || 'Anonim',
+        text: newMessage,
+      };
+      socket.emit('chatMessage', message); 
+      setChatMessages((prevMessages) => [...prevMessages, message]); 
+      setNewMessage('');
+    }
+  };
+
   return (
     <AppTheme mode={themeMode}>
-      <div>
-        <AppBar
-          position="static"
-          sx={{
-            backgroundColor: 'transparent',
-            boxShadow: 'none',
-            color: themeMode === 'dark' ? 'white' : 'black',
-          }}
-        >
-          <Toolbar>
-            <Typography variant="h6" sx={{ flexGrow: 1 }}>
-              Oyun Merkezi
-            </Typography>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={themeMode === 'dark'}
-                  onChange={toggleTheme}
-                  color="primary"
-                />
-              }
-              label={themeMode === 'dark' ? 'Dark Mode' : 'Light Mode'}
-            />
-            <Avatar
-              sx={{ cursor: 'pointer', ml: 2 }}
-              onClick={handleProfileClick}
-            >
-              U
-            </Avatar>
-            <Menu
-              anchorEl={anchorElProfile}
-              open={Boolean(anchorElProfile)}
-              onClose={handleProfileClose}
-            >
-              <MenuItem onClick={handleProfileClose}>Profil</MenuItem>
-              <MenuItem onClick={handleProfileClose}>Avatar Değiştir</MenuItem>
-              <MenuItem onClick={handleLogout}>Çıkış Yap</MenuItem>
-            </Menu>
-            <IconButton
-              color="inherit"
-              onClick={handleDrawerOpen} 
-              sx={{ ml: 2 }}
-            >
-              <GroupsIcon />
-            </IconButton>
-          </Toolbar>
-        </AppBar>
-        <Drawer anchor="right" open={drawerOpen} onClose={handleDrawerClose}>
-          <List sx={{ width: 250 }}>
-            <ListItem>
-              <Typography variant="h6">Lobiler</Typography>
-            </ListItem>
-            <Divider />
-            {lobbies.length > 0 ? (
-              lobbies.map(([code, lobby]) => (
-                <ListItem
-                  key={code}
-                  button
-                  onClick={() =>
-                    currentLobby?.name === lobby.name
-                      ? handleLeaveLobby(code) 
-                      : handleJoinDialogOpen([code, lobby]) 
+      <Box sx={{ display: 'flex' }}>
+        { }
+        {drawerVisible && (
+          <Drawer
+            variant="persistent"
+            open={drawerVisible}
+            sx={{
+              width: 300,
+              flexShrink: 0,
+              [`& .MuiDrawer-paper`]: { width: 300, boxSizing: 'border-box' },
+            }}
+          >
+            <Toolbar>
+              <Button onClick={toggleDrawerVisibility} sx={{ ml: 'auto' }}>
+                Kapat
+              </Button>
+            </Toolbar>
+            <Box sx={{ overflow: 'auto', padding: 2 }}>
+              <Typography variant="h6">Sohbet</Typography>
+              <Box sx={{ maxHeight: '70vh', overflowY: 'auto', mb: 2 }}>
+                {chatMessages.map((message, index) => (
+                  <Box key={index} sx={{ mb: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {message.username}:
+                    </Typography>
+                    <Typography variant="body2">{message.text}</Typography>
+                  </Box>
+                ))}
+              </Box>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Mesaj yaz..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSendMessage();
                   }
-                  sx={{
-                    backgroundColor: currentLobby?.name === lobby.name ? 'lightgreen' : 'inherit',
-                  }}
-                >
-                  <ListItemText
-                    primary={lobby.name}
-                    secondary={
-                      currentLobby?.name === lobby.name
-                        ? `Katılımcılar: ${lobby.participants?.length || 0}`
-                        : null
-                    }
-                  />
-                </ListItem>
-              ))
-            ) : (
-              <ListItem>
-                <ListItemText primary="Hiçbir lobi bulunamadı." />
-              </ListItem>
-            )}
-            <Divider />
-            <ListItem button onClick={handleDialogOpen}>
-              <ListItemText primary="Yeni Lobi Oluştur" />
-            </ListItem>
-          </List>
-        </Drawer>
-        <Dialog open={dialogOpen} onClose={handleDialogClose}>
-          <DialogTitle>Yeni Lobi Oluştur</DialogTitle>
-          <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Lobi Adı"
-              fullWidth
-              value={lobbyName}
-              onChange={(e) => setLobbyName(e.target.value)}
-            />
-            {lobbyCode && (
-              <Typography sx={{ mt: 2 }}>
-                Lobi Kodu: <strong>{lobbyCode}</strong>
+                }}
+              />
+              <Button
+                variant="contained"
+                fullWidth
+                sx={{ mt: 1 }}
+                onClick={handleSendMessage}
+              >
+                Gönder
+              </Button>
+            </Box>
+          </Drawer>
+        )}
+        {                             }
+        <Box sx={{ flexGrow: 1 }}>
+          <AppBar
+            position="static"
+            sx={{
+              backgroundColor: 'transparent',
+              boxShadow: 'none',
+              color: themeMode === 'dark' ? 'white' : 'black',
+            }}
+          >
+            <Toolbar>
+              <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                Oyun Merkezi
               </Typography>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleDialogClose}>İptal</Button>
-            <Button onClick={handleCreateLobby} disabled={!!lobbyCode}>
-              Oluştur
-            </Button>
-          </DialogActions>
-        </Dialog>
-        <Dialog open={joinDialogOpen} onClose={handleJoinDialogClose}>
-          <DialogTitle>Lobiye Katıl</DialogTitle>
-          <DialogContent>
-            <Typography>Lobi Adı: {selectedLobby?.[1].name}</Typography>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Lobi Kodu"
-              fullWidth
-              value={joinLobbyCode}
-              onChange={(e) => setJoinLobbyCode(e.target.value)}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleJoinDialogClose}>İptal</Button>
-            <Button onClick={handleJoinLobby}>Katıl</Button>
-          </DialogActions>
-        </Dialog>
-        <div style={{ padding: '20px' }}>
-          <div
-            style={{
-              width: '1024px',
-              height: '576px',
-              margin: '0 auto',
-              marginTop: '20px', 
-              backgroundImage: `url(${hoveredGame ? hoveredGame.image : '/images/background.jpg'})`,
-              backgroundSize: 'contain',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'flex-end',
-              borderRadius: '10px',
-              overflow: 'hidden',
-              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-              paddingBottom: '20px',
-            }}
-          >
-            <Grid container spacing={2} justifyContent="center">
-              {gamesWithBackgroundEffect.map((game) => (
-                <Grid
-                  item
-                  key={game.id}
-                  xs={12}
-                  sm={6}
-                  md={4}
-                  onMouseEnter={() => setHoveredGame(game)}
-                  onMouseLeave={() => setHoveredGame(null)}
-                  onClick={() => handleGameClick(game.id)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <Card>
-                    <CardMedia
-                      component="img"
-                      height="140"
-                      image={game.image}
-                      alt={game.name}
+              <Typography variant="body1" sx={{ mr: 2 }}>
+                Hoş geldiniz, {username || 'Kullanıcı'}!
+              </Typography>
+              <Button onClick={toggleDrawerVisibility}>
+                {drawerVisible ? 'Sohbeti Gizle' : 'Sohbeti Göster'}
+              </Button>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={themeMode === 'dark'}
+                    onChange={toggleTheme}
+                    color="primary"
+                  />
+                }
+                label={themeMode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+              />
+              <Avatar
+                src={avatar}
+                alt="Profil Avatarı"
+                sx={{ cursor: 'pointer', ml: 2 }}
+                onClick={handleProfileClick}
+              />
+              <Menu
+                anchorEl={anchorElProfile}
+                open={Boolean(anchorElProfile)}
+                onClose={handleProfileClose}
+              >
+                <MenuItem onClick={handleProfileClose}>Profil</MenuItem>
+                <MenuItem onClick={handleProfileClose}>Avatar Değiştir</MenuItem>
+                <MenuItem onClick={handleLogout}>Çıkış Yap</MenuItem>
+              </Menu>
+              <IconButton
+                color="inherit"
+                onClick={handleDrawerOpen} 
+                sx={{ ml: 2 }}
+              >
+                <GroupsIcon />
+              </IconButton>
+            </Toolbar>
+          </AppBar>
+          <Drawer anchor="right" open={drawerOpen} onClose={handleDrawerClose}>
+            <List sx={{ width: 250 }}>
+              <ListItem>
+                <Typography variant="h6">Lobiler</Typography>
+              </ListItem>
+              <Divider />
+              {lobbies.length > 0 ? (
+                lobbies.map(([code, lobby]) => (
+                  <ListItem
+                    key={code}
+                    button
+                    onClick={() =>
+                      currentLobby?.name === lobby.name
+                        ? handleLeaveLobby(code) 
+                        : handleJoinDialogOpen([code, lobby]) 
+                    }
+                    sx={{
+                      backgroundColor: currentLobby?.name === lobby.name ? 'lightgreen' : 'inherit',
+                    }}
+                  >
+                    <ListItemText
+                      primary={lobby.name}
+                      secondary={
+                        currentLobby?.name === lobby.name
+                          ? `Katılımcılar: ${lobby.participants?.length || 0}`
+                          : null
+                      }
                     />
-                    <CardContent>
-                      <Typography variant="h6">{game.name}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
+                  </ListItem>
+                ))
+              ) : (
+                <ListItem>
+                  <ListItemText primary="Hiçbir lobi bulunamadı." />
+                </ListItem>
+              )}
+              <Divider />
+              <ListItem button onClick={handleDialogOpen}>
+                <ListItemText primary="Yeni Lobi Oluştur" />
+              </ListItem>
+            </List>
+          </Drawer>
+          <Dialog open={dialogOpen} onClose={handleDialogClose}>
+            <DialogTitle>Yeni Lobi Oluştur</DialogTitle>
+            <DialogContent>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Lobi Adı"
+                fullWidth
+                value={lobbyName}
+                onChange={(e) => setLobbyName(e.target.value)}
+              />
+              {lobbyCode && (
+                <Typography sx={{ mt: 2 }}>
+                  Lobi Kodu: <strong>{lobbyCode}</strong>
+                </Typography>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleDialogClose}>İptal</Button>
+              <Button onClick={handleCreateLobby} disabled={!!lobbyCode}>
+                Oluştur
+              </Button>
+            </DialogActions>
+          </Dialog>
+          <Dialog open={joinDialogOpen} onClose={handleJoinDialogClose}>
+            <DialogTitle>Lobiye Katıl</DialogTitle>
+            <DialogContent>
+              <Typography>Lobi Adı: {selectedLobby?.[1].name}</Typography>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Lobi Kodu"
+                fullWidth
+                value={joinLobbyCode}
+                onChange={(e) => setJoinLobbyCode(e.target.value)}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleJoinDialogClose}>İptal</Button>
+              <Button onClick={handleJoinLobby}>Katıl</Button>
+            </DialogActions>
+          </Dialog>
+          <div style={{ padding: '20px' }}>
+            <div
+              style={{
+                width: '1024px',
+                height: '576px',
+                margin: '0 auto',
+                marginTop: '20px',
+                backgroundImage: `url(${hoveredGame.image})`,
+                backgroundSize: 'contain',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'flex-end',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+                paddingBottom: '20px',
+              }}
+            >
+              <Grid container spacing={2} justifyContent="center">
+                {gamesWithBackgroundEffect.map((game) => (
+                  <Grid
+                    item
+                    key={game.id}
+                    xs={12}
+                    sm={6}
+                    md={4}
+                    onMouseEnter={() => setHoveredGame(game)} 
+                    onMouseLeave={() => setHoveredGame(gamesWithBackgroundEffect[0])}
+                    onClick={() => handleGameClick(game.id)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <Card>
+                      <CardMedia
+                        component="img"
+                        height="140"
+                        image={game.image}
+                        alt={game.name}
+                      />
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </div>
+            <div
+              style={{
+                width: '1024px',
+                margin: '0 auto',
+                marginTop: '40px', 
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+                padding: '20px',
+                backgroundColor: themeMode === 'dark' ? '#333' : '#f9f9f9',
+              }}
+            >
+              <Grid container spacing={2} justifyContent="center">
+                {gamesWithoutBackgroundEffect.map((game) => (
+                  <Grid
+                    item
+                    key={game.id}
+                    xs={12}
+                    sm={6}
+                    md={4}
+                    onClick={() => handleGameClick(game.id)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <Card>
+                      <CardMedia
+                        component="img"
+                        height="140"
+                        image={game.image}
+                        alt={game.name}
+                      />
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </div>
+            <div
+              style={{
+                width: '1024px',
+                margin: '0 auto',
+                marginTop: '40px', 
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+                padding: '20px',
+                backgroundColor: themeMode === 'dark' ? '#444' : '#f0f0f0',
+              }}
+            >
+              <Grid container spacing={2} justifyContent="center">
+                {additionalGames.map((game) => (
+                  <Grid
+                    item
+                    key={game.id}
+                    xs={12}
+                    sm={6}
+                    md={4}
+                    onClick={() => handleGameClick(game.id)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <Card>
+                      <CardMedia
+                        component="img"
+                        height="140"
+                        image={game.image}
+                        alt={game.name}
+                      />
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </div>
           </div>
-          <div
-            style={{
-              width: '1024px',
-              margin: '0 auto',
-              marginTop: '40px', 
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: '10px',
-              overflow: 'hidden',
-              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-              padding: '20px',
-              backgroundColor: themeMode === 'dark' ? '#333' : '#f9f9f9',
-            }}
-          >
-            <Grid container spacing={2} justifyContent="center">
-              {gamesWithoutBackgroundEffect.map((game) => (
-                <Grid
-                  item
-                  key={game.id}
-                  xs={12}
-                  sm={6}
-                  md={4}
-                  onClick={() => handleGameClick(game.id)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <Card>
-                    <CardMedia
-                      component="img"
-                      height="140"
-                      image={game.image}
-                      alt={game.name}
-                    />
-                    <CardContent>
-                      <Typography variant="h6">{game.name}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </div>
-          <div
-            style={{
-              width: '1024px',
-              margin: '0 auto',
-              marginTop: '40px', 
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: '10px',
-              overflow: 'hidden',
-              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-              padding: '20px',
-              backgroundColor: themeMode === 'dark' ? '#444' : '#f0f0f0',
-            }}
-          >
-            <Grid container spacing={2} justifyContent="center">
-              {additionalGames.map((game) => (
-                <Grid
-                  item
-                  key={game.id}
-                  xs={12}
-                  sm={6}
-                  md={4}
-                  onClick={() => handleGameClick(game.id)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <Card>
-                    <CardMedia
-                      component="img"
-                      height="140"
-                      image={game.image}
-                      alt={game.name}
-                    />
-                    <CardContent>
-                      <Typography variant="h6">{game.name}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </div>
-        </div>
-      </div>
+        </Box>
+      </Box>
     </AppTheme>
   );
 }

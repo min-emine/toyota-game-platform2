@@ -1,10 +1,20 @@
 {
-  "emine.boluk@gtu.edutr": {
-    "password": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
-    "userId": "c2a0018f4238221f"
-  },
-  "klbk.sare1234@hotmail.com": {
+  "mail@mail.com": {
     "password": "d17f25ecfbcc7857f7bebea469308be0b2580943e96d13a3ad98a13675c4bfc2",
-    "userId": "467b1b47b0a69a59"
+    "userId": "6a8b5e9dbb50522c",
+    "username": "dummy2",
+    "avatar": "/images/44.jpeg"
+  },
+  "emine.boluk@gtu.edutr": {
+    "password": "d17f25ecfbcc7857f7bebea469308be0b2580943e96d13a3ad98a13675c4bfc2",
+    "userId": "c51aeb525abe8820",
+    "username": "emine",
+    "avatar": "/images/22.jpg"
+  },
+  "mailll@mail.com": {
+    "password": "d17f25ecfbcc7857f7bebea469308be0b2580943e96d13a3ad98a13675c4bfc2",
+    "userId": "6e5b38da96a44960",
+    "username": "dummy3",
+    "avatar": "/images/55.jpg"
   }
 }
