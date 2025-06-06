@@ -27,17 +27,30 @@ export default function IlkKapanin({ playType }) {
   const [currentPlayer, setCurrentPlayer] = useState(0);
   const [drawnNumbers, setDrawnNumbers] = useState([]);
   const [gameStarted, setGameStarted] = useState(false);
-  const [selection, setSelection] = useState([]); // Seçilen 3 kart (her tur)
-  const [revealed, setRevealed] = useState([]); // 99 kartın açık/kapalı durumu
+  const [selection, setSelection] = useState([]);
+  const [revealed, setRevealed] = useState([]);
   const [shuffledNumbers, setShuffledNumbers] = useState([]);
+  const [starNumbers, setStarNumbers] = useState([]); // Her oyuncunun yıldızlı sayıları
+  const [scores, setScores] = useState([]); // Her oyuncunun puanı
+  const [gameOver, setGameOver] = useState(false);
 
-  // Oyun başlatıldığında her oyuncuya klasik gibi 15 sayıdan oluşan kart ata
+  // Oyun başlatıldığında her oyuncuya klasik gibi 15 sayıdan oluşan kart ata ve 2 yıldızlı sayı seç
   const startGame = () => {
     const cards = [];
+    const stars = [];
     for (let i = 0; i < playerCount; i++) {
-      cards.push(getRandomNumbers(15, 99));
+      const card = getRandomNumbers(15, 99);
+      cards.push(card);
+      // Karttan rastgele 2 sayı seç ve yıldızlı olarak ata
+      const starIdxs = [];
+      while (starIdxs.length < 2) {
+        const idx = Math.floor(Math.random() * 15);
+        if (!starIdxs.includes(idx)) starIdxs.push(idx);
+      }
+      stars.push([card[starIdxs[0]], card[starIdxs[1]]]);
     }
     setPlayerCards(cards);
+    setStarNumbers(stars);
     setMarkedNumbers(cards.map(() => []));
     setDrawnNumbers([]);
     setCurrentPlayer(0);
@@ -45,40 +58,84 @@ export default function IlkKapanin({ playType }) {
     setSelection([]);
     setRevealed(Array(99).fill(false));
     setShuffledNumbers(shuffleArray(Array.from({ length: 99 }, (_, i) => i + 1)));
+    setScores(Array(playerCount).fill(0));
+    setGameOver(false);
   };
 
   // Kart seçimi (her turda 3 kart)
   const handleCardClick = (num) => {
-    if (selection.includes(num) || revealed[num - 1] || selection.length >= 3) return;
-    // Kartı aç (kalıcı olarak)
+    if (selection.includes(num) || revealed[num - 1] || selection.length >= 3 || gameOver) return;
     const newRevealed = [...revealed];
     newRevealed[num - 1] = true;
     setRevealed(newRevealed);
-    // Seçimi ekle
     const newSelection = [...selection, num];
     setSelection(newSelection);
 
-    // 3 seçim tamamlandıysa işlemleri yap
+    // Puan hesaplama
+    let scoreAdd = 0;
+    const stars = starNumbers[currentPlayer] || [];
+    const playerCard = playerCards[currentPlayer] || [];
+    if (num === 54) {
+      setScores((prev) =>
+        prev.map((s, idx) => {
+          if (idx === currentPlayer && playerCard.includes(54)) {
+            return s + 100;
+          }
+          if (idx !== currentPlayer && playerCards[idx]?.includes(54)) {
+            // Negatif puanlara izin ver
+            return (s - 100);
+          }
+          return s;
+        })
+      );
+    } else if (stars.includes(num)) {
+      scoreAdd = 100;
+      setScores((prev) =>
+        prev.map((s, idx) => (idx === currentPlayer ? s + scoreAdd : s))
+      );
+    } else if (playerCard.includes(num)) {
+      scoreAdd = 50;
+      setScores((prev) =>
+        prev.map((s, idx) => (idx === currentPlayer ? s + scoreAdd : s))
+      );
+    } else {
+      setScores((prev) => [...prev]);
+    }
+
     if (newSelection.length === 3) {
       setTimeout(() => {
-        // Seçilen kartları drawnNumbers'a ekle
         setDrawnNumbers((prev) => [...prev, ...newSelection]);
-        // Sadece o oyuncunun kartında varsa işaretle
         setMarkedNumbers((prev) =>
           prev.map((nums, idx) => {
             if (idx !== currentPlayer) return nums;
-            const playerCard = playerCards[idx];
-            const matched = newSelection.filter((n) => playerCard.includes(n));
+            const matched = newSelection.filter((n) => playerCards[idx].includes(n));
             return [...nums, ...matched];
           })
         );
-        // Sonraki oyuncuya geç ve seçimleri sıfırla (kartlar açık kalacak)
         setCurrentPlayer((prev) => (prev + 1) % playerCount);
         setSelection([]);
-        // setRevealed kaldırıldı, kartlar açık kalacak!
+
+        // Oyun bitti mi kontrolü
+        if (newRevealed.filter(Boolean).length === 99) {
+          setGameOver(true);
+        }
       }, 800);
     }
   };
+
+  // Oyun bittiğinde kazananı bul
+  let winnerText = '';
+  if (gameOver) {
+    const maxScore = Math.max(...scores);
+    const winners = scores
+      .map((score, idx) => ({ idx, score }))
+      .filter((obj) => obj.score === maxScore)
+      .map((obj) => (obj.idx === 0 ? 'Kullanıcı' : `Bot ${obj.idx}`));
+    winnerText =
+      winners.length === 1
+        ? `Kazanan: ${winners[0]} (${maxScore} puan)`
+        : `Beraberlik! (${maxScore} puan): ${winners.join(', ')}`;
+  }
 
   if (!playerCount) {
     return (
@@ -150,7 +207,9 @@ export default function IlkKapanin({ playType }) {
                       : 'error'
                     : 'primary'
                 }
-                disabled={revealed[num - 1] || selection.length >= 3}
+                disabled={
+                  revealed[num - 1] || selection.length >= 3 || gameOver
+                }
                 onClick={() => handleCardClick(num)}
                 sx={{
                   minWidth: 36,
@@ -200,32 +259,52 @@ export default function IlkKapanin({ playType }) {
               >
                 {idx === 0 ? 'Kullanıcı' : `Bot ${idx}`}
               </Typography>
+              {/* Puan ve yıldızlı sayılar */}
+              <Typography sx={{ fontFamily: 'Underdog, sans-serif', mb: 1 }}>
+                Puan: {scores[idx] || 0}
+              </Typography>
+              <Typography sx={{ fontFamily: 'Underdog, sans-serif', mb: 1, color: '#ff9800' }}>
+                Yıldızlı: {starNumbers[idx]?.join(', ')}
+              </Typography>
               {/* 3x5 grid */}
               {Array.from({ length: 3 }).map((_, rowIdx) => (
                 <Box key={rowIdx} sx={{ display: 'flex', justifyContent: 'center', mb: 0.5 }}>
-                  {card.slice(rowIdx * 5, rowIdx * 5 + 5).map((num, numIndex) => (
-                    <Typography
-                      key={numIndex}
-                      sx={{
-                        backgroundColor: markedNumbers[idx].includes(num)
-                          ? '#81c784'
-                          : '#e0e0e0',
-                        padding: '8px 12px',
-                        borderRadius: '4px',
-                        fontWeight: 'bold',
-                        fontFamily: 'Underdog, sans-serif',
-                        color: markedNumbers[idx].includes(num)
-                          ? '#000'
-                          : '#555',
-                        m: 0.5,
-                        minWidth: 36,
-                        textAlign: 'center',
-                        display: 'inline-block',
-                      }}
-                    >
-                      {num}
-                    </Typography>
-                  ))}
+                  {card.slice(rowIdx * 5, rowIdx * 5 + 5).map((num, numIndex) => {
+                    const isStar = starNumbers[idx]?.includes(num);
+                    const isMarked = markedNumbers[idx].includes(num);
+                    const isSpecial54 = num === 54 && !isMarked;
+                    return (
+                      <Typography
+                        key={numIndex}
+                        sx={{
+                          backgroundColor: isMarked
+                            ? isStar
+                              ? '#ffd600'
+                              : '#81c784'
+                            : isSpecial54
+                              ? '#222'
+                              : '#e0e0e0',
+                          padding: '8px 12px',
+                          borderRadius: '4px',
+                          fontWeight: 'bold',
+                          fontFamily: 'Underdog, sans-serif',
+                          color: isMarked
+                            ? '#000'
+                            : isSpecial54
+                              ? '#fff'
+                              : '#555',
+                          m: 0.5,
+                          minWidth: 36,
+                          textAlign: 'center',
+                          display: 'inline-block',
+                          border: isStar ? '2px solid #ff9800' : undefined,
+                        }}
+                      >
+                        {num}
+                        {isStar && '★'}
+                      </Typography>
+                    );
+                  })}
                 </Box>
               ))}
             </Box>
@@ -236,6 +315,11 @@ export default function IlkKapanin({ playType }) {
         <Typography sx={{ fontFamily: 'Underdog, sans-serif' }}>
           Çekilen Sayılar: {drawnNumbers.join(', ')}
         </Typography>
+        {gameOver && (
+          <Typography sx={{ fontFamily: 'Underdog, sans-serif', color: '#d32f2f', fontWeight: 'bold', mt: 2 }}>
+            {winnerText}
+          </Typography>
+        )}
       </Box>
     </Box>
   );

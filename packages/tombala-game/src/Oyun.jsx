@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Fade, Slide, Button } from '@mui/material';
+import { Box, Fade, Slide, Button, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import logo from '../logo5.png';
 import ModeSelector from '../components/ModeSelector';
@@ -127,18 +127,20 @@ export default function Oyun() {
               zIndex: 2000,
               pointerEvents: 'none',
               transition: 'all 0.7s cubic-bezier(.4,2,.6,1)',
+              pt: { xs: 0, md: 0 }, 
             }}
           >
             <img
               src={logo}
               alt="Tombala Logo"
-              style={{               
+              style={{
                 width: logoSmall,
                 height: logoSmall,
                 objectFit: 'contain',
                 transition: 'all 0.7s cubic-bezier(.4,2,.6,1)',
                 pointerEvents: 'none',
                 display: 'block',
+                marginTop: '-80px', 
               }}
             />
           </Box>
@@ -153,10 +155,54 @@ export default function Oyun() {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
+              justifyContent: 'flex-start',
               zIndex: 1,
+              pt: { xs: '150px', md: '220px' },
+              overflowY: 'auto',
+              boxSizing: 'border-box',
             }}
           >
+            {/* Oyun Kuralları Kutucuğu */}
+            <Box
+              sx={{
+                maxWidth: 700,
+                background: 'linear-gradient(90deg, #fffde4 0%, #f7f7f7 100%)',
+                border: '2px solid #2e7d32',
+                borderRadius: 3,
+                p: 3,
+                mb: 3,
+                mt: 1,
+                boxShadow: '0 2px 12px rgba(44, 62, 80, 0.08)',
+                fontFamily: "'Schoolbell', cursive",
+                color: '#333',
+                textAlign: 'left',
+              }}
+            >
+              <style>
+                {`@import url('https://fonts.googleapis.com/css2?family=Schoolbell&display=swap');`}
+              </style>
+              <Typography variant="h6" sx={{ fontFamily: "'Schoolbell', cursive", fontWeight: 'bold', color: '#2e7d32', mb: 1 }}>
+                🎲 Oyun Kuralları 
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 1, fontFamily: "'Schoolbell', cursive" }}>
+                - Her oyuncunun kartında <b>15 sayı</b> var. Her turda sırayla <b>3 kutu</b> açılır. Botlar da sıraya girer, kimseye torpil yok!
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 1, fontFamily: "'Schoolbell', cursive" }}>
+                - Kartındaki <b>yıldızlı</b> sayıyı kendi açarsan <b>100 puan</b> kaparsın. Diğer sayılar ise <b>50 puan</b> değerinde.
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 1, fontFamily: "'Schoolbell', cursive" }}>
+                - <b>54</b> sayısı ise tam bir sürpriz yumurta! Kartında 54 varsa ve <b>kendin açarsan</b> <b>100 puan</b> ekstra gelir. Ama başkası açarsa <b>100 puan</b> gider, dikkat!
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 1, fontFamily: "'Schoolbell', cursive" }}>
+                - Kartındaki 54 çıkana kadar <b>simsiyah</b> durur, bulursan aydınlanır!
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 1, fontFamily: "'Schoolbell', cursive" }}>
+                - Oyun sonunda en yüksek puanı toplayan kazanır. Beraberlikte herkes kazandı sayılır, çünkü hayat kısa!
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#888', mt: 1, fontFamily: "'Schoolbell', cursive" }}>
+                Bol şans! Unutma, botlar duygusuzdur ama şans bazen insanı sever.
+              </Typography>
+            </Box>
             {gameMode === 'klasik' && playType && (
               <KlasikTombala playType={playType} />
             )}
@@ -185,7 +231,6 @@ export default function Oyun() {
               Yeni Oyun
             </Button>
           </Box>
-        
         )}
       </Box>
     </Fade>

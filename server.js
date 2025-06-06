@@ -65,7 +65,9 @@ const lobbies = loadLobbies();
 setInterval(cleanUpExpiredLobbies, 60 * 60 * 1000);
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: '*', 
+}));
 
 app.post('/register', (req, res) => {
   const { email, password, username, avatar } = req.body;
@@ -179,11 +181,19 @@ function hashData(data) {
 
 wss.on('connection', (ws) => {
   ws.on('message', (message) => {
-    ws.send(`Server received: ${message}`);
+    const parsedMessage = JSON.parse(message);
+    if (parsedMessage.type === 'chatMessage') {
+      
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(parsedMessage));
+        }
+      });
+    }
   });
 });
 
 const PORT = 3003;
-server.listen(PORT, '0.0.0.0', () => { 
-  console.log(`Server is running on http://10.7.86.89:${PORT}`);
+server.listen(PORT, 'localhost', () => { 
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
