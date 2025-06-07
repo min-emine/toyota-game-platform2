@@ -20,7 +20,6 @@ function shuffleArray(array) {
   return arr;
 }
 
-// Confetti için React animasyonu (her biri ayrı Box ile hareket ediyor)
 function Confetti() {
   const confettiCount = 80;
   const [confettiList] = useState(() =>
