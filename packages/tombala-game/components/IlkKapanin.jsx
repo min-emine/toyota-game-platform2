@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, Button, Grid } from '@mui/material';
+import { Box, Typography, Button, Grid, Dialog, DialogTitle, DialogContent } from '@mui/material';
 
 function getRandomNumbers(count, max) {
   const arr = [];
@@ -20,6 +20,60 @@ function shuffleArray(array) {
   return arr;
 }
 
+function Confetti() {
+  const confettiCount = 80;
+  const [confettiList] = useState(() =>
+    Array.from({ length: confettiCount }).map(() => ({
+      left: Math.random() * 100,
+      delay: Math.random() * 1200,
+      color: `hsl(${Math.random() * 360},90%,60%)`,
+      rotate: Math.random() * 360,
+      size: 10 + Math.random() * 8,
+      duration: 1800 + Math.random() * 900,
+    }))
+  );
+  const [start, setStart] = useState(false);
+
+  React.useEffect(() => {
+    setTimeout(() => setStart(true), 50);
+  }, []);
+
+  return (
+    <Box
+      sx={{
+        pointerEvents: 'none',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 9999,
+        overflow: 'hidden',
+      }}
+    >
+      {confettiList.map((c, i) => (
+        <Box
+          key={i}
+          sx={{
+            position: 'absolute',
+            left: `${c.left}%`,
+            top: 0,
+            width: c.size,
+            height: c.size * 1.5,
+            borderRadius: '50%',
+            background: c.color,
+            opacity: 0.85,
+            transform: start
+              ? `translateY(110vh) rotate(${c.rotate + 360}deg)`
+              : `translateY(-${Math.random() * 20 + 5}vh) rotate(${c.rotate}deg)`,
+            transition: `transform ${c.duration}ms cubic-bezier(.4,2,.6,1) ${c.delay}ms`,
+          }}
+        />
+      ))}
+    </Box>
+  );
+}
+
 export default function IlkKapanin({ playType }) {
   const [playerCount, setPlayerCount] = useState(null);
   const [playerCards, setPlayerCards] = useState([]);
@@ -33,6 +87,12 @@ export default function IlkKapanin({ playType }) {
   const [starNumbers, setStarNumbers] = useState([]); // Her oyuncunun yıldızlı sayıları
   const [scores, setScores] = useState([]); // Her oyuncunun puanı
   const [gameOver, setGameOver] = useState(false);
+  const [jokerDialogOpen, setJokerDialogOpen] = useState(false);
+  const [jokerEligibleIdx, setJokerEligibleIdx] = useState(null);
+  const [turnCount, setTurnCount] = useState(0);
+  const [muteTargetDialogOpen, setMuteTargetDialogOpen] = useState(false);
+  const [pendingMuteIdx, setPendingMuteIdx] = useState(null);
+  const [x3List, setX3List] = useState([]); // [{ idx }]
 
   // Oyun başlatıldığında her oyuncuya klasik gibi 15 sayıdan oluşan kart ata ve 2 yıldızlı sayı seç
   const startGame = () => {
@@ -62,6 +122,29 @@ export default function IlkKapanin({ playType }) {
     setGameOver(false);
   };
 
+  // Joker seçimi dialogu
+  const handleJokerSelect = (type) => {
+    setJokerType(type);
+    setJokerDialogOpen(false);
+    if (type === 'mute') {
+      setPendingMuteIdx(jokerEligibleIdx);
+      setMuteTargetDialogOpen(true);
+    }
+    if (type === 'x3') {
+      // 3X jokeri: bir sonraki turda puan 3 ile çarpılır
+      setX3List((prev) => [...prev, { idx: jokerEligibleIdx }]);
+    }
+    // ...existing code for hint...
+  };
+
+  // Susturulacak rakip seçimi
+  const handleMuteTargetSelect = (targetIdx) => {
+    // Şimdilik sadece dialogu kapatıyoruz, ileride muteList'e eklenebilir
+    setMuteTargetDialogOpen(false);
+    setPendingMuteIdx(null);
+    // ...burada muteList'e ekleme yapılacak...
+  };
+
   // Kart seçimi (her turda 3 kart)
   const handleCardClick = (num) => {
     if (selection.includes(num) || revealed[num - 1] || selection.length >= 3 || gameOver) return;
@@ -71,6 +154,9 @@ export default function IlkKapanin({ playType }) {
     const newSelection = [...selection, num];
     setSelection(newSelection);
 
+    // 3X aktif mi?
+    const x3Active = x3List.some(x => x.idx === currentPlayer);
+
     // Puan hesaplama
     let scoreAdd = 0;
     const stars = starNumbers[currentPlayer] || [];
@@ -79,11 +165,10 @@ export default function IlkKapanin({ playType }) {
       setScores((prev) =>
         prev.map((s, idx) => {
           if (idx === currentPlayer && playerCard.includes(54)) {
-            return s + 100;
+            return s + 100 * (x3Active ? 3 : 1);
           }
           if (idx !== currentPlayer && playerCards[idx]?.includes(54)) {
-            // Negatif puanlara izin ver
-            return (s - 100);
+            return s - 100 * (x3Active && idx === currentPlayer ? 3 : 1);
           }
           return s;
         })
@@ -91,12 +176,12 @@ export default function IlkKapanin({ playType }) {
     } else if (stars.includes(num)) {
       scoreAdd = 100;
       setScores((prev) =>
-        prev.map((s, idx) => (idx === currentPlayer ? s + scoreAdd : s))
+        prev.map((s, idx) => (idx === currentPlayer ? s + scoreAdd * (x3Active ? 3 : 1) : s))
       );
     } else if (playerCard.includes(num)) {
       scoreAdd = 50;
       setScores((prev) =>
-        prev.map((s, idx) => (idx === currentPlayer ? s + scoreAdd : s))
+        prev.map((s, idx) => (idx === currentPlayer ? s + scoreAdd * (x3Active ? 3 : 1) : s))
       );
     } else {
       setScores((prev) => [...prev]);
@@ -112,10 +197,14 @@ export default function IlkKapanin({ playType }) {
             return [...nums, ...matched];
           })
         );
+        // 3X jokeri kullanıldıysa sil
+        if (x3Active) {
+          setX3List((prev) => prev.filter(x => x.idx !== currentPlayer));
+        }
         setCurrentPlayer((prev) => (prev + 1) % playerCount);
         setSelection([]);
+        setTurnCount((prev) => prev + 1);
 
-        // Oyun bitti mi kontrolü
         if (newRevealed.filter(Boolean).length === 99) {
           setGameOver(true);
         }
@@ -125,17 +214,40 @@ export default function IlkKapanin({ playType }) {
 
   // Oyun bittiğinde kazananı bul
   let winnerText = '';
+  let winnerIdx = null;
   if (gameOver) {
     const maxScore = Math.max(...scores);
     const winners = scores
       .map((score, idx) => ({ idx, score }))
       .filter((obj) => obj.score === maxScore)
       .map((obj) => (obj.idx === 0 ? 'Kullanıcı' : `Bot ${obj.idx}`));
+    winnerIdx = scores.findIndex((s) => s === maxScore);
     winnerText =
       winners.length === 1
         ? `Kazanan: ${winners[0]} (${maxScore} puan)`
         : `Beraberlik! (${maxScore} puan): ${winners.join(', ')}`;
   }
+
+  // Her 3 turun sonunda en düşük puanlıya joker hakkı (beraberlik varsa joker açılmaz)
+  React.useEffect(() => {
+    if (!gameStarted || playerCount == null) return;
+    if (turnCount > 0 && turnCount % (playerCount * 3) === 0) {
+      // En az puanlıyı bul
+      const minScore = Math.min(...scores);
+      const minIndexes = scores
+        .map((s, idx) => ({ s, idx }))
+        .filter(obj => obj.s === minScore)
+        .map(obj => obj.idx);
+      // Eğer birden fazla en düşük puanlı varsa (beraberlik) joker açılmaz
+      if (minIndexes.length === 1) {
+        let eligibleIdx = minIndexes[0];
+        setJokerEligibleIdx(eligibleIdx);
+        setJokerDialogOpen(true);
+      }
+      // Beraberlik varsa joker açılmaz, bir sonraki turda tekrar kontrol edilir
+    }
+    // eslint-disable-next-line
+  }, [turnCount, gameStarted, playerCount]);
 
   if (!playerCount) {
     return (
@@ -186,6 +298,118 @@ export default function IlkKapanin({ playType }) {
         justifyContent: 'flex-start',
       }}
     >
+      {/* Tur bilgisi */}
+      <Typography sx={{ fontFamily: 'Underdog, sans-serif', mb: 1, mt: 2, fontWeight: 'bold', color: '#2e7d32' }}>
+        Tur: {Math.floor(turnCount / playerCount) + 1}
+      </Typography>
+      {/* Joker Dialog */}
+      <Dialog
+        open={jokerDialogOpen}
+        onClose={() => {}}
+        disableEscapeKeyDown
+        hideBackdrop={false}
+      >
+        <DialogTitle>
+          {jokerEligibleIdx !== null
+            ? `Joker Seçimi: ${jokerEligibleIdx === 0 ? 'Kullanıcı' : `Bot ${jokerEligibleIdx}`}`
+            : 'Joker Seç!'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, mt: 1, justifyContent: 'center' }}>
+            <Button
+              variant="contained"
+              sx={{
+                m: 1,
+                fontSize: 32,
+                width: 64,
+                height: 64,
+                minWidth: 0,
+                minHeight: 0,
+                borderRadius: '50%',
+                backgroundColor: '#2e7d32',
+                color: '#fff',
+                '&:hover': { backgroundColor: '#388e3c' }
+              }}
+              onClick={() => {
+                setJokerDialogOpen(false);
+                setPendingMuteIdx(jokerEligibleIdx);
+                setMuteTargetDialogOpen(true);
+              }}
+              title="Sustur: Bir rakibini 1 tur susturabilirsin."
+            >
+              🤫
+            </Button>
+            <Button
+              variant="contained"
+              sx={{
+                m: 1,
+                fontSize: 32,
+                width: 64,
+                height: 64,
+                minWidth: 0,
+                minHeight: 0,
+                borderRadius: '50%',
+                backgroundColor: '#2e7d32',
+                color: '#fff',
+                '&:hover': { backgroundColor: '#388e3c' }
+              }}
+              onClick={() => {
+                setJokerDialogOpen(false);
+                setX3List((prev) => [...prev, { idx: jokerEligibleIdx }]);
+              }}
+              title="3X: Bir sonraki turda puanın 3 katı yazılır."
+            >
+              🚀
+            </Button>
+            <Button
+              variant="contained"
+              sx={{
+                m: 1,
+                fontSize: 32,
+                width: 64,
+                height: 64,
+                minWidth: 0,
+                minHeight: 0,
+                borderRadius: '50%',
+                backgroundColor: '#2e7d32',
+                color: '#fff',
+                '&:hover': { backgroundColor: '#388e3c' }
+              }}
+              // onClick={() => ...}
+              title="İpucu: Bir sayının hangi kartta olduğunu öğren."
+            >
+              💡
+            </Button>
+          </Box>
+        </DialogContent>
+      </Dialog>
+      {/* Susturulacak rakip seçimi dialogu */}
+      <Dialog open={muteTargetDialogOpen} onClose={() => setMuteTargetDialogOpen(false)}>
+        <DialogTitle>Hangi rakibini susturmak istersin?</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {Array.from({ length: playerCount })
+              .map((_, idx) => idx)
+              .filter(idx => idx !== pendingMuteIdx)
+              .map(idx => (
+                <Button
+                  key={idx}
+                  variant="contained"
+                  color="error"
+                  sx={{ m: 1 }}
+                  onClick={() => {
+                    // Şimdilik sadece dialogu kapatıyoruz, muteList'e ekleme ileride yapılabilir
+                    setMuteTargetDialogOpen(false);
+                    setPendingMuteIdx(null);
+                  }}
+                >
+                  {idx === 0 ? 'Kullanıcı' : `Bot ${idx}`}
+                </Button>
+              ))}
+          </Box>
+        </DialogContent>
+      </Dialog>
+
       <Typography sx={{ fontFamily: 'Underdog, sans-serif', mb: 2, mt: 4 }}>
         Sıra: {currentPlayer === 0 ? 'Kullanıcı' : `Bot ${currentPlayer}`}
       </Typography>
@@ -236,16 +460,41 @@ export default function IlkKapanin({ playType }) {
       {/* Oyuncu kartları */}
       <Grid container spacing={2} justifyContent="center">
         {playerCards.map((card, idx) => (
-          <Grid item xs={12} sm={6} md={4} key={idx}>
+          <Grid
+            item
+            xs={12}
+            sm={6}
+            md={4}
+            key={idx}
+            sx={{
+              zIndex: gameOver && winnerIdx === idx ? 100 : 1,
+              transition: gameOver ? 'transform 0.7s cubic-bezier(.4,2,.6,1), box-shadow 0.7s' : undefined,
+              transform:
+                gameOver && winnerIdx === idx
+                  ? 'scale(1.15) translateY(-30px)'
+                  : 'scale(1)',
+              boxShadow:
+                gameOver && winnerIdx === idx
+                  ? '0 0 40px 10px #ffd600, 0 8px 32px #2e7d32'
+                  : '0 4px 12px rgba(0,0,0,0.1)',
+              filter:
+                gameOver && winnerIdx !== idx
+                  ? 'blur(2px) grayscale(0.7) opacity(0.5)'
+                  : 'none',
+              pointerEvents: gameOver ? (winnerIdx === idx ? 'auto' : 'none') : 'auto',
+            }}
+          >
             <Box
               sx={{
                 border: idx === currentPlayer ? '3px solid #2e7d32' : '2px solid #2e7d32',
                 borderRadius: 2,
                 padding: 2,
                 backgroundColor: '#fff',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                 textAlign: 'center',
                 opacity: idx === currentPlayer ? 1 : 0.7,
+                position: 'relative',
+                transition: 'box-shadow 0.7s, border 0.7s',
+                borderColor: gameOver && winnerIdx === idx ? '#ffd600' : undefined,
               }}
             >
               <Typography
@@ -273,6 +522,8 @@ export default function IlkKapanin({ playType }) {
                     const isStar = starNumbers[idx]?.includes(num);
                     const isMarked = markedNumbers[idx].includes(num);
                     const isSpecial54 = num === 54 && !isMarked;
+                    const isOwnCard = playerCards[idx]?.includes(num);
+                    const isDrawnButNotMarked = isOwnCard && drawnNumbers.includes(num) && !markedNumbers[idx].includes(num);
                     return (
                       <Typography
                         key={numIndex}
@@ -283,7 +534,9 @@ export default function IlkKapanin({ playType }) {
                               : '#81c784'
                             : isSpecial54
                               ? '#222'
-                              : '#e0e0e0',
+                              : isDrawnButNotMarked
+                                ? '#bdbdbd'
+                                : '#e0e0e0',
                           padding: '8px 12px',
                           borderRadius: '4px',
                           fontWeight: 'bold',
@@ -292,7 +545,9 @@ export default function IlkKapanin({ playType }) {
                             ? '#000'
                             : isSpecial54
                               ? '#fff'
-                              : '#555',
+                              : isDrawnButNotMarked
+                                ? '#888'
+                                : '#555',
                           m: 0.5,
                           minWidth: 36,
                           textAlign: 'center',
@@ -307,14 +562,17 @@ export default function IlkKapanin({ playType }) {
                   })}
                 </Box>
               ))}
+              {/* Konfeti animasyonu sadece kazanan kartta */}
+              {gameOver && winnerIdx === idx && <Confetti />}
             </Box>
           </Grid>
         ))}
       </Grid>
       <Box sx={{ mt: 2, textAlign: 'center' }}>
-        <Typography sx={{ fontFamily: 'Underdog, sans-serif' }}>
-          Çekilen Sayılar: {drawnNumbers.join(', ')}
+        <Typography sx={{ fontFamily: 'Underdog, sans-serif', fontWeight: 'bold', fontSize: 22, mb: 1 }}>
+          Tur: {Math.floor(turnCount / playerCount) + 1}
         </Typography>
+        {/* Çekilen sayılar burada gösterilmiyor */}
         {gameOver && (
           <Typography sx={{ fontFamily: 'Underdog, sans-serif', color: '#d32f2f', fontWeight: 'bold', mt: 2 }}>
             {winnerText}

@@ -197,6 +197,21 @@ export default function Oyun() {
                 - Kartındaki 54 çıkana kadar <b>simsiyah</b> durur, bulursan aydınlanır!
               </Typography>
               <Typography variant="body1" sx={{ mb: 1, fontFamily: "'Schoolbell', cursive" }}>
+                - Kartında olan bir sayıyı başka biri açarsa, o sayı <b>gri</b> olur ve bir daha çıkmaz.
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 1, fontFamily: "'Schoolbell', cursive" }}>
+                - Oyun sırasında hangi turda olduğun ekranın altında yazar.
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 1, fontFamily: "'Schoolbell', cursive" }}>
+                - Her <b>3 turun</b> sonunda en düşük puanlı yarışmacıya <b>joker</b> hakkı çıkar. Beraberlik varsa, beraberlik bozulana kadar joker hakkı verilmez.
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 1, fontFamily: "'Schoolbell', cursive" }}>
+                - Jokerler: <b>🤫 Sustur</b> (bir rakibini 1 tur sustur), <b>🚀 3X</b> (bir sonraki turda puanın 3 katı), <b>💡 İpucu</b> (bir sayının hangi kartta olduğunu öğren).
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 1, fontFamily: "'Schoolbell', cursive" }}>
+                - Joker seçimi yapılmadan oyun devam etmez. Sustur jokerinde rakip seçimi zorunludur.
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 1, fontFamily: "'Schoolbell', cursive" }}>
                 - Oyun sonunda en yüksek puanı toplayan kazanır. Beraberlikte herkes kazandı sayılır, çünkü hayat kısa!
               </Typography>
               <Typography variant="body2" sx={{ color: '#888', mt: 1, fontFamily: "'Schoolbell', cursive" }}>
