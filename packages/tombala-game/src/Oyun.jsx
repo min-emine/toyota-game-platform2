@@ -12,10 +12,8 @@ export default function Oyun() {
   const [showGame, setShowGame] = useState(false);
   const navigate = useNavigate();
 
-  // İki buton seçildiyse devam et butonu gelsin
   const isReady = gameMode && playType;
 
-  // Logo boyutları
   const logoBig = 700;
   const logoSmall = 240;
 
@@ -31,7 +29,6 @@ export default function Oyun() {
           overflow: 'hidden',
         }}
       >
-        {/* Her zaman üstte görünen Ana Sayfaya Dön butonu */}
         <Box sx={{ position: 'fixed', top: 24, left: 24, zIndex: 1000 }}>
           <Button
             variant="contained"
@@ -55,7 +52,6 @@ export default function Oyun() {
           </Button>
         </Box>
 
-        {/* Oyun modları ve oynama tipi butonları sadece showGame false iken ortada göster */}
         {!showGame && (
           <Box
             sx={{
@@ -70,7 +66,6 @@ export default function Oyun() {
               zIndex: 1000,
             }}
           >
-            {/* Logo ve butonlar alt alta */}
             <Box sx={{ mb: 1 }}>
               <img
                 src={logo}
@@ -112,7 +107,6 @@ export default function Oyun() {
           </Box>
         )}
 
-         {/* Logo - sadece showGame true iken animasyonlu ve yukarıda göster */}
         <Slide direction="up" in={showGame} mountOnEnter unmountOnExit>
           <Box
             sx={{
@@ -127,7 +121,7 @@ export default function Oyun() {
               zIndex: 2000,
               pointerEvents: 'none',
               transition: 'all 0.7s cubic-bezier(.4,2,.6,1)',
-              pt: { xs: 0, md: 0 }, 
+              pt: { xs: 0, md: 0 },
             }}
           >
             <img
@@ -140,13 +134,12 @@ export default function Oyun() {
                 transition: 'all 0.7s cubic-bezier(.4,2,.6,1)',
                 pointerEvents: 'none',
                 display: 'block',
-                marginTop: '-80px', 
+                marginTop: '-80px',
               }}
             />
           </Box>
         </Slide>
 
-   {/* Oyun ekranı sadece showGame true olunca ve ortada göster */}
         {showGame && (
           <Box
             sx={{
@@ -162,7 +155,6 @@ export default function Oyun() {
               boxSizing: 'border-box',
             }}
           >
-            {/* Oyun Kuralları Kutucuğu */}
             <Box
               sx={{
                 maxWidth: 700,
@@ -182,7 +174,7 @@ export default function Oyun() {
                 {`@import url('https://fonts.googleapis.com/css2?family=Schoolbell&display=swap');`}
               </style>
               <Typography variant="h6" sx={{ fontFamily: "'Schoolbell', cursive", fontWeight: 'bold', color: '#2e7d32', mb: 1 }}>
-                🎲 Oyun Kuralları 
+                🎲 Oyun Kuralları
               </Typography>
               <Typography variant="body1" sx={{ mb: 1, fontFamily: "'Schoolbell', cursive" }}>
                 - Her oyuncunun kartında <b>15 sayı</b> var. Her turda sırayla <b>3 kutu</b> açılır. Botlar da sıraya girer, kimseye torpil yok!
@@ -224,7 +216,6 @@ export default function Oyun() {
             {gameMode === 'ilkKapanin' && playType && (
               <IlkKapanin playType={playType} />
             )}
-            {/* Yeni Oyun Butonu */}
             <Button
               variant="contained"
               color="secondary"
