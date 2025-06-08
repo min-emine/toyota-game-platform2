@@ -1,4 +1,3 @@
-
 1. **Gerekli Bağımlılıkları Yükleyin**:
    - Proje dizininde aşağıdaki komutları çalıştırarak bağımlılıkları yükleyin:
 
