@@ -34,5 +34,35 @@
     "userId": "cc75989ffed75554",
     "username": "nene",
     "avatar": "/images/88.png"
+  },
+  "deneme3@den.com": {
+    "password": "d17f25ecfbcc7857f7bebea469308be0b2580943e96d13a3ad98a13675c4bfc2",
+    "userId": "9bab68583bfb1dac",
+    "username": "DENEME",
+    "avatar": "/images/21.jpg"
+  },
+  "denemed3@den.com": {
+    "password": "d17f25ecfbcc7857f7bebea469308be0b2580943e96d13a3ad98a13675c4bfc2",
+    "userId": "3559503520b385b7",
+    "username": "abi",
+    "avatar": "/images/55.jpg"
+  },
+  "mailel@mail.com": {
+    "password": "d17f25ecfbcc7857f7bebea469308be0b2580943e96d13a3ad98a13675c4bfc2",
+    "userId": "b0a8204ed7bd9468",
+    "username": "dede2",
+    "avatar": "/images/20.jpg"
+  },
+  "emisne@ogr.sakarya.edu.tr": {
+    "password": "d17f25ecfbcc7857f7bebea469308be0b2580943e96d13a3ad98a13675c4bfc2",
+    "userId": "6799b422dce96c61",
+    "username": "abi2",
+    "avatar": "/images/55.jpg"
+  },
+  "exafmple@example.com": {
+    "password": "d17f25ecfbcc7857f7bebea469308be0b2580943e96d13a3ad98a13675c4bfc2",
+    "userId": "eefc19890a218203",
+    "username": "kardeş",
+    "avatar": "/images/20.jpg"
   }
 }

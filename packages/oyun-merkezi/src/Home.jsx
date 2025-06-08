@@ -70,6 +70,22 @@ export default function Home() {
   }, [themeMode]);
 
   useEffect(() => {
+    const fetchLobbies = async () => {
+      try {
+        const response = await fetch('http://localhost:3003/lobbies');
+        const data = await response.json();
+        // data bir obje: { lobbyCode: {name, participants, ...}, ... }
+        // Sunucuya katılımcı isimlerini eklettik, onları doğrudan kullan!
+        const lobbiesWithParticipants = Object.entries(data).map(([code, lobby]) => ({
+          code,
+          ...lobby
+        }));
+        setLobbies(lobbiesWithParticipants);
+      } catch (error) {
+        console.error('Error fetching lobbies:', error);
+      }
+    };
+
     fetchLobbies();
   }, []);
 
@@ -129,21 +145,6 @@ export default function Home() {
     } catch (error) {
       console.error('Lobi oluşturulurken bir hata oluştu:', error);
       alert(error.message || 'Lobi oluşturulamadı.');
-    }
-  };
-
-  const fetchLobbies = async () => {
-    try {
-      const response = await fetch('http://localhost:3003/lobbies'); // Localhost adresi
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      console.log('Lobiler:', data); 
-      setLobbies(Object.entries(data)); 
-    } catch (error) {
-      console.error('Lobiler alınırken bir hata oluştu:', error);
-      alert(error.message || 'Lobiler alınamadı.');
     }
   };
 
@@ -269,14 +270,14 @@ export default function Home() {
             </ListItem>
             <Divider />
             {lobbies.length > 0 ? (
-              lobbies.map(([code, lobby]) => (
+              lobbies.map((lobby) => (
                 <ListItem
-                  key={code}
+                  key={lobby.code}
                   button
                   onClick={() =>
                     currentLobby?.name === lobby.name
-                      ? handleLeaveLobby(code) 
-                      : handleJoinDialogOpen([code, lobby]) 
+                      ? handleLeaveLobby(lobby.code)
+                      : handleJoinDialogOpen([lobby.code, lobby])
                   }
                   sx={{
                     backgroundColor: currentLobby?.name === lobby.name ? 'lightgreen' : 'inherit',
@@ -285,9 +286,16 @@ export default function Home() {
                   <ListItemText
                     primary={lobby.name}
                     secondary={
-                      currentLobby?.name === lobby.name
-                        ? `Katılımcılar: ${lobby.participants?.length || 0}`
-                        : null
+                      <>
+                        Katılımcı sayısı: {lobby.participants?.length || 0}
+                        {lobby.participantNames && lobby.participantNames.length > 0 && (
+                          <div style={{ fontSize: 12, marginTop: 4 }}>
+                            {lobby.participantNames.map((name, i) => (
+                              <div key={i}>{name}</div>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     }
                   />
                 </ListItem>

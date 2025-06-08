@@ -1,7 +1,14 @@
 import React from 'react';
 import { Box, Button } from '@mui/material';
 
-export default function ModeSelector({ gameMode, setGameMode, playType, setPlayType }) {
+export default function ModeSelector({ gameMode, setGameMode, playType, setPlayType, onLobbyNavigate }) {
+  const handleLobbyPlay = () => {
+    setPlayType('lobby');
+    if (onLobbyNavigate) {
+      onLobbyNavigate(gameMode);
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, mb: 3 }}>
       <Box sx={{ display: 'flex', gap: 2 }}>
@@ -36,7 +43,7 @@ export default function ModeSelector({ gameMode, setGameMode, playType, setPlayT
           variant={playType === 'lobby' ? 'contained' : 'outlined'}
           color="info"
           disabled={!gameMode}
-          onClick={() => setPlayType('lobby')}
+          onClick={handleLobbyPlay}
           sx={{ fontWeight: 'bold', fontFamily: 'Underdog, sans-serif' }}
         >
           Lobi ile Oyna

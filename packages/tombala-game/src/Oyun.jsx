@@ -5,6 +5,7 @@ import logo from '../logo5.png';
 import ModeSelector from '../components/ModeSelector';
 import KlasikTombala from '../components/KlasikTombala';
 import IlkKapanin from '../components/IlkKapanin';
+import IlkKapaninLobby from '../components/IlkKapaninLobby';
 
 export default function Oyun() {
   const [gameMode, setGameMode] = useState(null);
@@ -214,7 +215,11 @@ export default function Oyun() {
               <KlasikTombala playType={playType} />
             )}
             {gameMode === 'ilkKapanin' && playType && (
-              <IlkKapanin playType={playType} />
+              playType === 'lobby' ? (
+                <IlkKapaninLobby />
+              ) : (
+                <IlkKapanin playType={playType} />
+              )
             )}
             <Button
               variant="contained"

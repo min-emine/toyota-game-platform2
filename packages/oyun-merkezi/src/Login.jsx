@@ -71,6 +71,7 @@ export default function Login() {
       if (mode === 'signIn') {
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userId', data.userId);
+        localStorage.setItem('username', data.username);
         localStorage.setItem('avatar', data.avatar);
         if (rememberMe) {
           const updatedUsers = [
