@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Grow, Grid, Snackbar } from '@mui/material';
 
-// Dummy API fonksiyonları (backend ile entegre edeceksen değiştir)
 const fetchUserLobbies = async (userId) => [
   { code: 'ABC123', name: 'Aile Lobisi' },
   { code: 'XYZ789', name: 'Arkadaşlar' }
@@ -55,14 +54,12 @@ export default function KlasikTombala({ playType }) {
   const [isTombala, setIsTombala] = useState(false);
   const [gameFinished, setGameFinished] = useState(false);
 
-  // Kullanıcının olduğu lobileri çek
   useEffect(() => {
     const fetchUserLobbies = async () => {
       try {
         const userId = localStorage.getItem('userId');
         const response = await fetch('http://localhost:3003/lobbies');
         const data = await response.json();
-        // data: { lobbyCode: {name, participants, ...}, ... }
         const lobbies = Object.entries(data)
           .filter(([code, lobby]) => (lobby.participants || []).includes(userId))
           .map(([code, lobby]) => ({ code, name: lobby.name }));
@@ -74,18 +71,14 @@ export default function KlasikTombala({ playType }) {
     fetchUserLobbies();
   }, []);
 
-  // Lobi seçilince lobideki kullanıcıları çek
   const handleLobbySelect = async (lobbyCode) => {
     setSelectedLobby(lobbyCode);
-    // Gerçek kullanıcıları backend'den çek
     try {
       const response = await fetch('http://localhost:3003/lobbies');
       const data = await response.json();
       const lobby = data[lobbyCode];
-      // Katılımcı userId'lerini ve isimlerini al
       const participants = lobby?.participants || [];
       const participantNames = lobby?.participantNames || [];
-      // Her kullanıcı için bir obje oluştur
       const users = participants.map((userId, i) => ({
         userId,
         username: participantNames[i] || `Oyuncu ${i + 1}`
@@ -96,7 +89,6 @@ export default function KlasikTombala({ playType }) {
     }
   };
 
-  // Lobi kullanıcıları değişince kartları oluştur
   useEffect(() => {
     if (playType === 'lobby' && selectedLobby && lobbyUsers.length > 0) {
       const newCards = lobbyUsers.map((user, i) => ({
@@ -111,7 +103,6 @@ export default function KlasikTombala({ playType }) {
     // eslint-disable-next-line
   }, [lobbyUsers, selectedLobby, playType]);
 
-  // Bot ile oynanıyorsa kart oluştur
   useEffect(() => {
     if (playType === 'bot' && playerCount) {
       const newCards = [];
@@ -131,7 +122,6 @@ export default function KlasikTombala({ playType }) {
     setPlayerCount(count);
   };
 
-  // WebSocket bağlantısı ve oyun senkronizasyonu
   useEffect(() => {
     if (playType === 'lobby' && selectedLobby && lobbyUsers.length > 0) {
       const userId = localStorage.getItem('userId');
@@ -145,9 +135,7 @@ export default function KlasikTombala({ playType }) {
           setDrawnNumbers(data.drawnNumbers || []);
           setCurrentNumber(data.currentNumber || null);
           setServerCard(data.card || null);
-          // Yeni: Tüm kartları al
           if (data.allCards) setAllCards(data.allCards);
-          // Sunucudan gelen bildirimleri göster
           if (data.notifications && data.notifications.length > 0) {
             setNotifications((prev) => [...prev, ...data.notifications]);
           }
@@ -158,7 +146,6 @@ export default function KlasikTombala({ playType }) {
     }
   }, [playType, selectedLobby, lobbyUsers]);
 
-  // Klasik Tombala çekilişi
   const drawNumber = () => {
     if (playType === 'lobby' && socket && socket.readyState === 1) {
       socket.send(JSON.stringify({ type: 'draw-number' }));
@@ -208,7 +195,6 @@ export default function KlasikTombala({ playType }) {
     setCards(updatedCards);
   };
 
-  // WebSocket ile gelen game-state mesajında çinko/tombala kontrolü
   useEffect(() => {
     if (playType === 'lobby' && serverCard && drawnNumbers.length > 0) {
       let newCompletedRows = 0;
@@ -217,11 +203,9 @@ export default function KlasikTombala({ playType }) {
           newCompletedRows++;
         }
       });
-      // Çinko bildirimi sadece yeni çinko olduğunda gelsin
       if (newCompletedRows > completedRows && newCompletedRows < 3) {
         setNotifications((prev) => [...prev, `${newCompletedRows}. Çinko!`]);
       }
-      // Tombala bildirimi ve sıralama
       if (newCompletedRows === 3 && !isTombala) {
         setNotifications((prev) => [...prev, 'Tombala!']);
         setTombalaWinners((prev) => [...prev, 'Siz']);
@@ -233,10 +217,8 @@ export default function KlasikTombala({ playType }) {
     // eslint-disable-next-line
   }, [drawnNumbers, serverCard, playType]);
 
-  // Tombala sıralamasında sadece 1. Siz yazmasın, diğer oyuncular da gözüksün
   useEffect(() => {
     if (playType === 'lobby' && allCards.length > 0 && drawnNumbers.length > 0) {
-      // Her oyuncunun tamamladığı satırları kontrol et
       const winners = [];
       allCards.forEach(([userId, card]) => {
         let rows = 0;
@@ -254,7 +236,6 @@ export default function KlasikTombala({ playType }) {
     // eslint-disable-next-line
   }, [allCards, drawnNumbers, playType]);
 
-  // Tekrar oyna butonu
   const handleRestart = () => {
     if (playType === 'lobby' && socket && socket.readyState === 1) {
       socket.send(JSON.stringify({ type: 'restart-game' }));
@@ -266,7 +247,6 @@ export default function KlasikTombala({ playType }) {
     }
   };
 
-  // Lobi ile oynanıyorsa lobi seçimi
   if (playType === 'lobby' && !selectedLobby) {
     return (
       <Box sx={{ mt: 4, mb: 2 }}>
@@ -294,7 +274,6 @@ export default function KlasikTombala({ playType }) {
     );
   }
 
-  // Bot ile oynanıyorsa oyuncu sayısı seçimi
   if (playType === 'bot' && !playerCount) {
     return (
       <Box sx={{ mt: 4 }}>
@@ -322,9 +301,7 @@ export default function KlasikTombala({ playType }) {
     );
   }
 
-  // Kartlar ve oyun ekranı
   if (playType === 'lobby' && selectedLobby && serverCard) {
-    // Eğer allCards varsa, tüm oyuncuların kartlarını göster
     const cardsToShow = allCards.length > 0 ? allCards : [[localStorage.getItem('userId'), serverCard]];
     return (
       <Box sx={{ mt: 4 }}>
@@ -493,7 +470,6 @@ export default function KlasikTombala({ playType }) {
     );
   }
 
-  // Gizli kartlar ile oyun
   return (
     <Box sx={{ mt: 4 }}>
       <Button

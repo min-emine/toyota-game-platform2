@@ -232,7 +232,6 @@ export default function IlkKapanin({ playType }) {
         setJokerDialogOpen(true);
       }
     }
-    // eslint-disable-next-line
   }, [turnCount, gameStarted, playerCount]);
 
   const [hintDialogOpen, setHintDialogOpen] = useState(false);

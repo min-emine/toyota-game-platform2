@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Box, Typography, Button, Grid, Avatar, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import { Box, Typography, Button, Grid, Avatar, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Badge } from '@mui/material';
+import { Close as CloseIcon, ChatBubbleOutline as ChatBubbleOutlineIcon, Remove as RemoveIcon } from '@mui/icons-material';
 
 function generateRandomCard() {
   const numbers = new Set();
@@ -18,20 +19,20 @@ function generateRandomCard() {
 export default function IlkKapaninLobby({}) {
   const userId = localStorage.getItem('userId');
   const username = localStorage.getItem('username');
-  const [drawnNumbers, setDrawnNumbers] = useState([]); // Açılan kartlar (1-99)
-  const [allCards, setAllCards] = useState([]); // [[userId, kart]]
+  const [drawnNumbers, setDrawnNumbers] = useState([]);
+  const [allCards, setAllCards] = useState([]);
   const [gameOver, setGameOver] = useState(false);
-  const [scores, setScores] = useState({}); // {userId: puan}
-  const [currentPlayer, setCurrentPlayer] = useState(null); // userId
-  const [selection, setSelection] = useState([]); // Sıradaki oyuncunun seçtiği kartlar
+  const [scores, setScores] = useState({});
+  const [currentPlayer, setCurrentPlayer] = useState(null);
+  const [selection, setSelection] = useState([]);
   const [gameStarted, setGameStarted] = useState(false);
   const [userLobbies, setUserLobbies] = useState([]);
   const [selectedLobby, setSelectedLobby] = useState(null);
   const [lobbyUsers, setLobbyUsers] = useState([]);
   const wsRef = useRef(null);
-  const [shuffledNumbers, setShuffledNumbers] = useState([]); // karışık 1-99
+  const [shuffledNumbers, setShuffledNumbers] = useState([]);
   const [drawnBy, setDrawnBy] = useState({});
-  const [starNumbers, setStarNumbers] = useState([]); // Yıldızlı sayılar için durum
+  const [starNumbers, setStarNumbers] = useState([]);
   const [userAvatars, setUserAvatars] = useState({});
   const [jokerDialogOpen, setJokerDialogOpen] = useState(false);
   const [jokerEligible, setJokerEligible] = useState(null);
@@ -40,8 +41,12 @@ export default function IlkKapaninLobby({}) {
   const [hintDialogOpen, setHintDialogOpen] = useState(false);
   const [hintNumber, setHintNumber] = useState('');
   const [pendingMuteTarget, setPendingMuteTarget] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
+  const [hasUnreadChat, setHasUnreadChat] = useState(false);
+  const notificationAudioRef = React.useRef(null);
 
-  // Lobi listesini çek
   useEffect(() => {
     const fetchUserLobbies = async () => {
       try {
@@ -58,7 +63,6 @@ export default function IlkKapaninLobby({}) {
     fetchUserLobbies();
   }, [userId]);
 
-  // Lobi seçilince lobideki kullanıcıları çek
   const handleLobbySelect = async (lobbyCode) => {
     setSelectedLobby(lobbyCode);
     try {
@@ -67,12 +71,17 @@ export default function IlkKapaninLobby({}) {
       const lobby = data[lobbyCode];
       const participants = lobby?.participants || [];
       const participantNames = lobby?.participantNames || [];
-      // users.json'dan avatarları çek
-      const usersJson = await fetch('/users.json').then(r => r.json()).catch(() => ({}));
-      // userId -> avatar eşlemesi
+      let usersJson = {};
+      try {
+        usersJson = await fetch('/api/users').then(r => r.json());
+      } catch (e) {
+        usersJson = {};
+      }
       const avatarMap = {};
       Object.values(usersJson).forEach(u => {
-        if (u.userId && u.avatar !== undefined) avatarMap[u.userId] = u.avatar;
+        if (u.userId && u.avatar !== undefined) {
+          avatarMap[u.userId] = u.avatar;
+        }
       });
       setUserAvatars(avatarMap);
       const users = participants.map((userId, i) => ({
@@ -81,12 +90,21 @@ export default function IlkKapaninLobby({}) {
         avatar: avatarMap[userId] || ''
       }));
       setLobbyUsers(users);
+
+      try {
+        const lobbyAvatars = JSON.parse(localStorage.getItem('lobbyAvatars') || '{}');
+        users.forEach(u => {
+          if (u.userId && u.avatar) {
+            lobbyAvatars[u.userId] = u.avatar;
+          }
+        });
+        localStorage.setItem('lobbyAvatars', JSON.stringify(lobbyAvatars));
+      } catch (e) {}
     } catch (error) {
       setLobbyUsers([]);
     }
   };
 
-  // Oyun başında bir kez karıştır
   useEffect(() => {
     if (gameStarted && drawnNumbers.length === 0) {
       const arr = Array.from({ length: 99 }, (_, i) => i + 1);
@@ -98,7 +116,6 @@ export default function IlkKapaninLobby({}) {
     }
   }, [gameStarted]);
 
-  // WebSocket bağlantısı ve oyun state'i sadece lobi seçilince başlatılsın
   useEffect(() => {
     if (!selectedLobby) return;
     if (wsRef.current) wsRef.current.close();
@@ -118,13 +135,11 @@ export default function IlkKapaninLobby({}) {
         setSelection(data.selection || []);
         setDrawnBy(data.drawnBy || {});
         setStarNumbers(data.starNumbers || []);
-        // Only set gameStarted to true if state is valid
         if (Array.isArray(data.allCards) && data.allCards.length > 0 && data.scores && data.currentPlayer) {
           setGameStarted(true);
         } else {
           setGameStarted(false);
         }
-        // Eğer oyun yeniden başlatıldıysa veya yeni oyun başladıysa kartları tekrar karıştır
         if (data.drawnNumbers && data.drawnNumbers.length === 0) {
           const arr = Array.from({ length: 99 }, (_, i) => i + 1);
           for (let i = arr.length - 1; i > 0; i--) {
@@ -138,13 +153,24 @@ export default function IlkKapaninLobby({}) {
         setJokerDialogOpen(true);
         setJokerEligible(data.eligibleUserId);
       }
+      if (data.type === 'lobby-chat' && data.message) {
+        if (!data.message.lobbyCode || data.message.lobbyCode === selectedLobby) {
+          setChatMessages((prev) => [...prev, data.message]);
+          if (!chatOpen) {
+            setHasUnreadChat(true);
+            if (notificationAudioRef.current) {
+              notificationAudioRef.current.currentTime = 0;
+              notificationAudioRef.current.play();
+            }
+          }
+        }
+      }
     };
     ws.onerror = () => setGameStarted(false);
     ws.onclose = () => setGameStarted(false);
     return () => ws.close();
   }, [selectedLobby, userId]);
 
-  // Sadece kendi sırası olan oyuncu seçim yapabilir
   const isMyTurn = currentPlayer === userId;
   const handleCardClick = (num) => {
     if (!isMyTurn || drawnNumbers.includes(num) || selection.includes(num) || gameOver || selection.length >= 3) return;
@@ -157,13 +183,27 @@ export default function IlkKapaninLobby({}) {
       wsRef.current.send(JSON.stringify({ type: 'start-game' }));
     }
   };
-  const handleRestart = () => {
+  const handleRestart = async () => {
     if (wsRef.current && wsRef.current.readyState === 1) {
       wsRef.current.send(JSON.stringify({ type: 'restart-game' }));
+      const response = await fetch(`/api/new-cards?lobbyCode=${selectedLobby}`);
+      if (response.ok) {
+        const { newCards } = await response.json();
+        setAllCards(newCards);
+      } else {
+        console.error('Failed to fetch new cards');
+      }
+      setDrawnNumbers([]);
+      setScores({});
+      setGameOver(false);
+      setCurrentPlayer(null);
+      setSelection([]);
+      setDrawnBy({});
+      setStarNumbers([]);
+      setGameStarted(false);
     }
   };
 
-  // Joker action senders
   const sendJokerAction = (type, extra) => {
     if (!wsRef.current || wsRef.current.readyState !== 1) return;
     let msg = { type: 'joker-action', jokerType: type };
@@ -181,7 +221,6 @@ export default function IlkKapaninLobby({}) {
     setHintNumber('');
   };
 
-  // Joker dialog UI
   const renderJokerDialog = () => (
     <Dialog open={jokerDialogOpen} onClose={() => {}} disableEscapeKeyDown>
       <DialogTitle>Joker Seçimi</DialogTitle>
@@ -196,7 +235,10 @@ export default function IlkKapaninLobby({}) {
           <Button
             variant="contained"
             sx={{ m: 1, fontSize: 32, width: 64, height: 64, borderRadius: '50%', backgroundColor: '#2e7d32', color: '#fff' }}
-            onClick={() => { sendJokerAction('x3'); }}
+            onClick={() => {
+              sendJokerAction('x3');
+              setJokerDialogOpen(false);
+            }}
             title="3X: Bir sonraki turda puanın 3 katı yazılır."
           >🚀</Button>
           <Button
@@ -210,7 +252,6 @@ export default function IlkKapaninLobby({}) {
     </Dialog>
   );
 
-  // Mute target dialog
   const renderMuteTargetDialog = () => (
     <Dialog open={muteTargetDialogOpen} onClose={() => setMuteTargetDialogOpen(false)}>
       <DialogTitle>Hangi rakibini susturmak istersin?</DialogTitle>
@@ -226,7 +267,6 @@ export default function IlkKapaninLobby({}) {
     </Dialog>
   );
 
-  // Hint dialog
   const renderHintDialog = () => (
     <Dialog open={hintDialogOpen} onClose={() => setHintDialogOpen(false)}>
       <DialogTitle>Hangi sayının yerini görmek istiyorsunuz?</DialogTitle>
@@ -239,7 +279,16 @@ export default function IlkKapaninLobby({}) {
             onChange={e => setHintNumber(e.target.value)}
             inputProps={{ min: 1, max: 99 }}
           />
-          <Button variant="contained" color="primary" onClick={() => { if (hintNumber >= 1 && hintNumber <= 99) sendJokerAction('hint', hintNumber); }}>
+          <Button variant="contained" color="primary" onClick={() => {
+            const num = parseInt(hintNumber, 10);
+            if (num >= 1 && num <= 99 && !drawnNumbers.includes(num)) {
+              setDrawnNumbers(prev => prev.includes(num) ? prev : [...prev, num]);
+              setDrawnBy(prev => ({ ...prev, [num]: null }));
+              sendJokerAction('hint', num);
+            }
+            setHintDialogOpen(false);
+            setHintNumber('');
+          }}>
             Onayla
           </Button>
         </Box>
@@ -247,7 +296,22 @@ export default function IlkKapaninLobby({}) {
     </Dialog>
   );
 
-  // Lobi seçilmemişse önce lobi seçtir
+  const sendChatMessage = () => {
+    if (!chatInput.trim() || !selectedLobby) return;
+    if (wsRef.current && wsRef.current.readyState === 1) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "lobby-chat",
+          lobbyCode: selectedLobby,
+          userId,
+          username,
+          text: chatInput.trim(),
+        })
+      );
+      setChatInput("");
+    }
+  };
+
   if (!selectedLobby) {
     return (
       <Box sx={{ mt: 4, mb: 2 }}>
@@ -275,13 +339,10 @@ export default function IlkKapaninLobby({}) {
     );
   }
 
-  // Joker engeli: Sadece joker seçimi sırasında diğer oyuncular engellenir
   const isJokerBlocked = jokerDialogOpen || muteTargetDialogOpen || hintDialogOpen;
 
-  // --- DEFENSIVE RENDER WRAPPER ---
   let renderContent;
   try {
-    // Defensive: show loading or start button if state is incomplete or invalid
     const isStateInvalid =
       !Array.isArray(allCards) ||
       allCards.length === 0 ||
@@ -322,78 +383,117 @@ export default function IlkKapaninLobby({}) {
             {selectedLobby ? 'Oyun başlatılıyor veya yükleniyor...' : 'Lobi seçiniz.'}
           </Typography>
           {selectedLobby && (
-            <Button variant="contained" color="success" onClick={handleStart}>
-              Oyunu Başlat
+            <Button
+              variant="contained"
+              color="success"
+              onClick={handleStart}
+              sx={{
+                fontFamily: 'Underdog, sans-serif',
+                fontWeight: 'bold',
+                fontSize: 18,
+                px: 3,
+                py: 1.5,
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                transition: 'transform 0.2s',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 6px 16px rgba(0,0,0,0.3)',
+                },
+              }}
+            >
+              🚀 Oyunu Başlat 🚀
             </Button>
           )}
-          <Box sx={{ mt: 4, textAlign: 'left', maxWidth: 600, mx: 'auto', bgcolor: '#f5f5f5', p: 2, borderRadius: 2 }}>
-            <Typography variant="body2" sx={{ color: '#888', mb: 1 }}>Debug: Oyun State</Typography>
-            <pre style={{ fontSize: 12, maxHeight: 200, overflow: 'auto' }}>{JSON.stringify({ allCards, scores, currentPlayer, gameStarted, drawnNumbers, starNumbers }, null, 2)}</pre>
-          </Box>
         </Box>
       );
     } else {
+      const playerCount = allCards.length;
+      const round = playerCount > 0 ? Math.floor(drawnNumbers.length / (playerCount * 3)) + 1 : 1;
+      let winnerUid = null;
+      let winnerText = '';
+      if (gameOver) {
+        const maxScore = Math.max(...Object.values(scores));
+        const winners = Object.keys(scores).filter(uid => scores[uid] === maxScore);
+        winnerUid = winners.length === 1 ? winners[0] : null;
+        winnerText = winners.length === 1
+          ? `${lobbyUsers.find(u => u.userId === winners[0])?.username || 'Bir oyuncu'} kazandı!`
+          : 'Beraberlik!';
+      }
       renderContent = (
-        <Box sx={{ mt: 4 }}>
-          {jokerDialogOpen && jokerEligible === userId && renderJokerDialog()}
-          {muteTargetDialogOpen && renderMuteTargetDialog()}
-          {hintDialogOpen && renderHintDialog()}
-          <Typography variant="h5" sx={{ mb: 2 }}>
-            İlk Kapanın (Lobi)
-          </Typography>
-          <Typography sx={{ mb: 2, color: isMyTurn ? '#2e7d32' : '#888', fontWeight: 'bold' }}>
-            {isMyTurn ? 'Sıra sizde! 3 kart seçin' : 'Diğer oyuncuyu bekleyin...'}
-          </Typography>
-          {isJokerBlocked && (
-            <Box sx={{ mb: 2 }}>
-              <Typography color="warning.main" fontWeight="bold">Joker seçimi bekleniyor...</Typography>
-            </Box>
-          )}
-          <Button variant="outlined" color="secondary" onClick={handleRestart} sx={{ ml: 2 }} disabled={isJokerBlocked}>
-            Oyunu Yeniden Başlat
-          </Button>
-          <Box sx={{ mt: 2, mb: 2 }}>
-            <Typography sx={{ fontWeight: 'bold' }}>Kapalı Kartlar</Typography>
-            <Grid container spacing={1} justifyContent="center">
-              {(shuffledNumbers.length > 0 ? shuffledNumbers : Array.from({ length: 99 }, (_, i) => i + 1)).map((num) => {
-                const openedBy = drawnBy[num];
-                let bg = undefined;
-                let color = undefined;
-                if (drawnNumbers.includes(num)) {
-                  if (openedBy === userId) {
-                    bg = '#388e3c';
-                    color = '#fff';
-                  } else {
-                    bg = '#bdbdbd';
-                    color = '#333';
+        <Box sx={{ mt: 10, px: 2, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative' }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            {jokerDialogOpen && jokerEligible === userId && renderJokerDialog()}
+            {muteTargetDialogOpen && renderMuteTargetDialog()}
+            {hintDialogOpen && renderHintDialog()}
+
+            <Typography sx={{ fontFamily: 'Underdog, sans-serif', mb: 1, mt: 2, fontWeight: 'bold', color: '#2e7d32' }}>
+              Tur: {round}
+            </Typography>
+            <Typography sx={{ fontFamily: 'Underdog, sans-serif', mb: 2, mt: 1 }}>
+              Sıra: {(() => {
+                const user = lobbyUsers.find(u => u.userId === currentPlayer);
+                return user ? user.username + (currentPlayer === userId ? ' (Siz)' : '') : currentPlayer;
+              })()}
+            </Typography>
+            <Box sx={{ mb: 4 }}>
+              <Typography sx={{ fontFamily: 'Underdog, sans-serif', mb: 1 }}>
+                1-99 arası {3 - selection.length} sayı seçiniz:
+              </Typography>
+              <Grid container spacing={1} justifyContent="center">
+                {(shuffledNumbers.length > 0 ? shuffledNumbers : Array.from({ length: 99 }, (_, i) => i + 1)).map((num) => {
+                  const openedBy = drawnBy[num];
+                  let bg = undefined;
+                  let color = undefined;
+                  let border = undefined;
+                  if (drawnNumbers.includes(num)) {
+                    if (openedBy === userId) {
+                      bg = '#388e3c';
+                      color = '#fff';
+                    } else if (openedBy === null) {
+                      bg = '#ffe082';
+                      color = '#333';
+                      border = '2px dashed #ffd600';
+                    } else {
+                      bg = '#bdbdbd';
+                      color = '#333';
+                    }
                   }
-                }
-                return (
-                  <Grid item key={num}>
-                    <Button
-                      variant={drawnNumbers.includes(num) ? 'contained' : 'outlined'}
-                      color={drawnNumbers.includes(num) ? 'success' : 'primary'}
-                      disabled={!isMyTurn || drawnNumbers.includes(num) || selection.includes(num) || gameOver || selection.length >= 3 || isJokerBlocked}
-                      onClick={() => handleCardClick(num)}
-                      sx={{ minWidth: 32, minHeight: 32, fontWeight: 'bold', mx: 0.2, backgroundColor: bg, color }}
-                    >
-                      {drawnNumbers.includes(num) ? num : '?'}
-                    </Button>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          </Box>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6">Oyuncu Kartları</Typography>
-            <Grid container spacing={2} justifyContent="center" alignItems="stretch">
+                  return (
+                    <Grid item xs={2} sm={1} md={1} key={num}>
+                      <Button
+                        variant={drawnNumbers.includes(num) ? 'contained' : 'outlined'}
+                        color={drawnNumbers.includes(num) ? 'success' : 'primary'}
+                        disabled={!isMyTurn || drawnNumbers.includes(num) || selection.includes(num) || gameOver || selection.length >= 3 || isJokerBlocked}
+                        onClick={() => handleCardClick(num)}
+                        sx={{
+                          minWidth: 36,
+                          minHeight: 36,
+                          fontSize: 14,
+                          fontFamily: 'Underdog, sans-serif',
+                          backgroundColor: bg,
+                          color,
+                          border,
+                          boxShadow: drawnNumbers.includes(num) ? '0 2px 6px rgba(0,0,0,0.10)' : undefined,
+                          transition: 'all 0.2s',
+                          m: 0.2
+                        }}
+                        title={openedBy === null ? 'İpucu jokeriyle açıldı' : undefined}
+                      >
+                        {drawnNumbers.includes(num) ? num : '?'}
+                      </Button>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            </Box>
+
+            <Grid container spacing={2} justifyContent="center">
               {allCards.map(([uid, kart], idx) => {
-                // Her oyuncunun yıldızlı sayıları
                 let stars = [];
                 if (Array.isArray(starNumbers) && starNumbers[idx]) {
                   stars = starNumbers[idx];
                 }
-                // Kullanıcı adı bul
                 let displayName = uid;
                 const userObj = lobbyUsers.find(u => u.userId === uid);
                 if (userObj && userObj.username) {
@@ -402,33 +502,65 @@ export default function IlkKapaninLobby({}) {
                   displayName = username + ' (Siz)';
                 }
                 return (
-                  <Grid item xs={12} sm={6} md={4} lg={3} xl={2} key={uid} display="flex" justifyContent="center" alignItems="stretch">
-                    <Box sx={{
-                      border: '2px solid #2e7d32',
-                      borderRadius: 2,
-                      p: 2,
-                      mb: 2,
-                      background: currentPlayer === uid ? '#e8f5e9' : '#fff',
-                      minWidth: 220,
-                      maxWidth: 260,
-                      boxShadow: 3,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      height: '100%',
-                    }}>
-                      {/* Avatar ekle */}
+                  <Grid
+                    item
+                    xs={12}
+                    sm={6}
+                    md={4}
+                    key={uid}
+                    sx={{
+                      zIndex: gameOver && winnerUid === uid ? 100 : 1,
+                      transition: gameOver ? 'transform 0.7s cubic-bezier(.4,2,.6,1), box-shadow 0.7s' : undefined,
+                      transform:
+                        gameOver && winnerUid === uid
+                          ? 'scale(1.15) translateY(-30px)'
+                          : 'scale(1)',
+                      boxShadow:
+                        gameOver && winnerUid === uid
+                          ? '0 0 40px 10px #ffd600, 0 8px 32px #2e7d32'
+                          : '0 4px 12px rgba(0,0,0,0.1)',
+                      filter:
+                        gameOver && winnerUid !== uid
+                          ? 'blur(2px) grayscale(0.7) opacity(0.5)'
+                          : 'none',
+                      pointerEvents: gameOver ? (winnerUid === uid ? 'auto' : 'none') : 'auto',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        border: currentPlayer === uid ? '3px solid #2e7d32' : '2px solid #2e7d32',
+                        borderRadius: 2,
+                        padding: 2,
+                        backgroundColor: '#fff',
+                        textAlign: 'center',
+                        opacity: currentPlayer === uid ? 1 : 0.7,
+                        position: 'relative',
+                        transition: 'box-shadow 0.7s, border 0.7s',
+                        borderColor: gameOver && winnerUid === uid ? '#ffd600' : undefined,
+                      }}
+                    >
                       <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
                         <Avatar
-                          src={userObj && userObj.avatar ? `/images/${userObj.avatar.split('/').pop()}` : undefined}
+                          src={uid === userId
+                            ? (localStorage.getItem('avatar')?.startsWith('/images/')
+                                ? localStorage.getItem('avatar')
+                                : localStorage.getItem('avatar') ? `/images/${localStorage.getItem('avatar')}` : undefined)
+                            : (userObj && userObj.avatar ? (userObj.avatar.startsWith('/images/') ? userObj.avatar : `/images/${userObj.avatar}`) : undefined)
+                          }
                           sx={{ bgcolor: '#2e7d32', width: 48, height: 48, fontSize: 28 }}
                         >
                           {(!userObj || !userObj.avatar) && (userObj && userObj.username ? userObj.username[0].toUpperCase() : (username ? username[0].toUpperCase() : '?'))}
                         </Avatar>
                       </Box>
-                      <Typography sx={{ fontWeight: 'bold', mb: 1, textAlign: 'center' }}>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold', fontFamily: 'Underdog, sans-serif', color: '#2e7d32', mb: 2 }}>
                         {displayName}
                         {currentPlayer === uid && ' (Sıra)'}
+                      </Typography>
+                      <Typography sx={{ fontFamily: 'Underdog, sans-serif', mb: 1 }}>
+                        Puan: {scores[uid] || 0}
+                      </Typography>
+                      <Typography sx={{ fontFamily: 'Underdog, sans-serif', mb: 1, color: '#ff9800' }}>
+                        Yıldızlı: {stars.join(', ')}
                       </Typography>
                       {kart && kart.map((row, i) => (
                         <Box key={i} sx={{ display: 'flex', justifyContent: 'center', mb: 0.5 }}>
@@ -437,22 +569,21 @@ export default function IlkKapaninLobby({}) {
                             const openedBy = drawnBy[num];
                             let bg = '#e0e0e0';
                             let color = '#555';
-                            let border = '1px solid #bbb';
-                            // 54 özel puan kuralı için görsel vurgulama
+                            let border = isStar ? '2px solid #ff9800' : '1px solid #bbb';
                             if (num === 54 && drawnNumbers.includes(num)) {
                               if (openedBy === uid) {
-                                bg = '#1565c0'; // kendi açtıysa mavi
+                                bg = '#1565c0';
                                 color = '#fff';
                                 border = '2px solid #1565c0';
                               } else if (openedBy) {
-                                bg = '#d32f2f'; // başkası açtıysa kırmızı
+                                bg = '#d32f2f';
                                 color = '#fff';
                                 border = '2px solid #d32f2f';
                               }
                             } else if (drawnNumbers.includes(num)) {
                               if (openedBy === uid) {
-                                bg = '#388e3c';
-                                color = '#fff';
+                                bg = '#81c784';
+                                color = '#000';
                               } else if (openedBy) {
                                 bg = '#bdbdbd';
                                 color = '#333';
@@ -462,47 +593,180 @@ export default function IlkKapaninLobby({}) {
                               }
                             }
                             return (
-                              <Box
+                              <Typography
                                 key={j}
                                 sx={{
-                                  minWidth: 32,
-                                  minHeight: 32,
-                                  fontWeight: 'bold',
-                                  mx: 0.5,
                                   backgroundColor: bg,
                                   color,
                                   borderRadius: '4px',
                                   textAlign: 'center',
-                                  display: 'inline-block',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
                                   border,
-                                  position: 'relative',
+                                  fontWeight: 'bold',
+                                  fontFamily: 'Underdog, sans-serif',
+                                  m: 0.5,
+                                  minWidth: 48,
+                                  minHeight: 40,
+                                  maxWidth: 48,
+                                  maxHeight: 40,
+                                  width: 48,
+                                  height: 40,
+                                  fontSize: 18,
+                                  boxSizing: 'border-box',
+                                  padding: 0,
+                                  letterSpacing: 0.5,
+                                  transition: 'background 0.2s, color 0.2s',
                                 }}
                               >
                                 {num}
-                                {isStar && (
-                                  <Typography component="span" color="warning.main" sx={{ ml: 0.5, fontSize: 18, verticalAlign: 'middle', fontWeight: 'bold' }}>
-                                    ★
-                                  </Typography>
-                                )}
-                              </Box>
+                                {isStar && <span style={{ color: '#ff9800', marginLeft: 2, fontSize: 18 }}>★</span>}
+                              </Typography>
                             );
                           })}
                         </Box>
                       ))}
-                      <Typography sx={{ fontWeight: 'bold', mt: 1, textAlign: 'center' }}>
-                        Puan: {scores[uid] || 0}
-                      </Typography>
+                      {gameOver && winnerUid === uid && (
+                        <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                        </Box>
+                      )}
                     </Box>
                   </Grid>
                 );
               })}
             </Grid>
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <Typography sx={{ fontFamily: 'Underdog, sans-serif', fontWeight: 'bold', fontSize: 22, mb: 1 }}>
+                Tur: {round}
+              </Typography>
+              {gameOver && (
+                <Typography sx={{ fontFamily: 'Underdog, sans-serif', color: '#d32f2f', fontWeight: 'bold', mt: 2 }}>
+                  {winnerText}
+                </Typography>
+              )}
+              <Button
+                variant="contained"
+                color="primary"
+                sx={{ mt: 2, fontWeight: 'bold', fontFamily: 'Underdog, sans-serif' }}
+                onClick={handleRestart}
+              >
+                Yeniden Başlat
+              </Button>
+            </Box>
           </Box>
-          {gameOver && (
-            <Box sx={{ mt: 2 }}>
-              <Typography sx={{ color: '#2e7d32', fontWeight: 'bold' }}>Oyun Bitti!</Typography>
+          {!chatOpen && (
+            <Box
+              sx={{
+                position: 'fixed',
+                right: { xs: 16, md: 32 },
+                bottom: { xs: 16, md: 32 },
+                zIndex: 1300,
+              }}
+            >
+              <Badge
+                color="error"
+                variant="dot"
+                invisible={!hasUnreadChat}
+                overlap="circular"
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+              >
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={() => setChatOpen(true)}
+                  sx={{ minWidth: 0, width: 56, height: 56, borderRadius: '50%', boxShadow: 4, p: 0 }}
+                >
+                  <ChatBubbleOutlineIcon sx={{ fontSize: 32 }} />
+                </Button>
+              </Badge>
             </Box>
           )}
+          {chatOpen && (
+            <Box sx={{
+              position: 'fixed',
+              right: { xs: 8, md: 24 },
+              bottom: { xs: 8, md: 24 },
+              width: 260,
+              minWidth: 180,
+              maxWidth: 320,
+              bgcolor: '#f5f5f5',
+              borderRadius: 2,
+              boxShadow: 4,
+              display: 'flex',
+              flexDirection: 'column',
+              height: 280,
+              zIndex: 1200
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1, pb: 0 }}>
+                <Typography sx={{ fontFamily: 'Underdog, sans-serif', fontWeight: 'bold', fontSize: 15, color: '#2e7d32' }}>Lobi Sohbeti</Typography>
+                <Button onClick={() => setChatOpen(false)} sx={{ minWidth: 0, p: 0.5 }}><RemoveIcon /></Button>
+              </Box>
+              <Box sx={{ flex: 1, overflowY: 'auto', px: 1.5, py: 0.5, mb: 1 }}>
+                {chatMessages.length === 0 && (
+                  <Typography sx={{ color: '#888', fontSize: 12, fontFamily: 'Underdog, sans-serif' }}>Henüz mesaj yok.</Typography>
+                )}
+                {chatMessages.map((msg, i) => {
+                  let avatarSrc = '';
+                  let displayName = msg.username || '?';
+                  if (!msg.username || msg.username === '?') {
+                    const userObj = lobbyUsers.find(u => u.userId === msg.userId);
+                    if (userObj && userObj.username) {
+                      displayName = userObj.username;
+                    } else if (msg.userId === userId && username) {
+                      displayName = username;
+                    } else {
+                      displayName = msg.userId === userId ? 'Siz' : 'Kullanıcı';
+                    }
+                  }
+                  if (msg.userId === userId) {
+                    avatarSrc = localStorage.getItem('avatar')?.startsWith('/images/')
+                      ? localStorage.getItem('avatar')
+                      : localStorage.getItem('avatar') ? `/images/${localStorage.getItem('avatar')}` : '';
+                  } else {
+                    const lobbyAvatars = JSON.parse(localStorage.getItem('lobbyAvatars') || '{}');
+                    if (lobbyAvatars[msg.userId]) {
+                      avatarSrc = lobbyAvatars[msg.userId].startsWith('/images/') ? lobbyAvatars[msg.userId] : `/images/${lobbyAvatars[msg.userId]}`;
+                    } else if (userAvatars && userAvatars[msg.userId]) {
+                      avatarSrc = userAvatars[msg.userId].startsWith('/images/') ? userAvatars[msg.userId] : `/images/${userAvatars[msg.userId]}`;
+                    } else {
+                      const userObj = lobbyUsers.find(u => u.userId === msg.userId);
+                      if (userObj && userObj.avatar) {
+                        avatarSrc = userObj.avatar.startsWith('/images/') ? userObj.avatar : `/images/${userObj.avatar}`;
+                      }
+                    }
+                  }
+                  return (
+                    <Box key={msg.ts + '-' + i} sx={{ mb: 0.5, display: 'flex', flexDirection: 'row', alignItems: 'flex-end' }}>
+                      <Avatar
+                        src={avatarSrc || undefined}
+                        sx={{ width: 22, height: 22, fontSize: 12, bgcolor: msg.userId === userId ? '#2e7d32' : '#bdbdbd', mr: 0.5 }}
+                      >
+                        {!avatarSrc && (displayName ? displayName[0].toUpperCase() : '?')}
+                      </Avatar>
+                      <Box sx={{ bgcolor: msg.userId === userId ? '#c8e6c9' : '#fff', borderRadius: 2, px: 1, py: 0.2, maxWidth: 140, boxShadow: 1 }}>
+                        <Typography sx={{ fontWeight: 'bold', fontSize: 11, color: '#2e7d32', fontFamily: 'Underdog, sans-serif' }}>{displayName}</Typography>
+                        <Typography sx={{ fontSize: 12, color: '#333', fontFamily: 'Underdog, sans-serif' }}>{msg.text}</Typography>
+                      </Box>
+                    </Box>
+                  );
+                })}
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', p: 1, pt: 0, borderTop: '1px solid #e0e0e0' }}>
+                <TextField
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') sendChatMessage(); }}
+                  placeholder="Mesaj yaz..."
+                  size="small"
+                  sx={{ flex: 1, mr: 1, fontFamily: 'Underdog', fontSize: 12 }}
+                  inputProps={{ maxLength: 200, style: { fontSize: 12 } }}
+                />
+                <Button variant="contained" color="success" onClick={sendChatMessage} sx={{ fontWeight: 'bold', fontFamily: 'Underdog', fontSize: 12, px: 1.5, py: 0.5 }}>Gönder</Button>
+              </Box>
+            </Box>
+          )}
+          <audio ref={notificationAudioRef} src="/images/notify.mp3" preload="auto" style={{ display: 'none' }} />
         </Box>
       );
     }
