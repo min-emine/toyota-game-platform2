@@ -70,5 +70,41 @@
     "userId": "34cfea69c993d769",
     "username": "abla",
     "avatar": "/images/22.jpg"
+  },
+  "mail1@mail.com": {
+    "password": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+    "userId": "56a840bca82cff51",
+    "username": "abla",
+    "avatar": ""
+  },
+  "mail2@mail.com": {
+    "password": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+    "userId": "f14fa50ad7f42499",
+    "username": "abla",
+    "avatar": "/images/22.jpg"
+  },
+  "mail3@mail.com": {
+    "password": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+    "userId": "7a7c52b216e82966",
+    "username": "abi",
+    "avatar": "/images/55.jpg"
+  },
+  "maill4@mail.com": {
+    "password": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+    "userId": "dc963d57d31f2971",
+    "username": "baba",
+    "avatar": "/images/21.jpg"
+  },
+  "ldkjljlfsk@sdfjkk.com": {
+    "password": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+    "userId": "491e9286952c7e5a",
+    "username": "kardeş",
+    "avatar": "/images/20.jpg"
+  },
+  "ldkjljk@sdfjkk.com": {
+    "password": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+    "userId": "f61b3e1efb5442ea",
+    "username": "nene",
+    "avatar": "/images/88.png"
   }
 }

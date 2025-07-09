@@ -93,6 +93,10 @@ export default function IlkKapanin({ playType }) {
   const [muteTargetDialogOpen, setMuteTargetDialogOpen] = useState(false);
   const [pendingMuteIdx, setPendingMuteIdx] = useState(null);
   const [x3List, setX3List] = useState([]);
+  const [hintDialogOpen, setHintDialogOpen] = useState(false);
+  const [hintNumber, setHintNumber] = useState(null);
+  // Tooltip state for joker buttons
+  const [tooltipOpen, setTooltipOpen] = useState(null);
 
   const startGame = () => {
     const cards = [];
@@ -234,9 +238,6 @@ export default function IlkKapanin({ playType }) {
     }
   }, [turnCount, gameStarted, playerCount]);
 
-  const [hintDialogOpen, setHintDialogOpen] = useState(false);
-  const [hintNumber, setHintNumber] = useState(null);
-
   const handleHintConfirm = () => {
     const numberToReveal = parseInt(hintNumber, 10);
 
@@ -313,88 +314,264 @@ export default function IlkKapanin({ playType }) {
         onClose={() => {}}
         disableEscapeKeyDown
         hideBackdrop={false}
+        PaperProps={{
+          sx: {
+            minWidth: 490,
+            minHeight: 340,
+            px: 3,
+            py: 2,
+            borderRadius: 4,
+            '@media (max-width:600px)': {
+              minWidth: 0,
+              width: '95vw',
+              px: 1,
+            },
+          }
+        }}
       >
-        <DialogTitle>
+        <DialogTitle sx={{
+          textAlign: 'center',
+          fontFamily: 'Underdog, sans-serif',
+          fontWeight: 'bold',
+          fontSize: 28,
+          color: '#2e7d32',
+          letterSpacing: 1.5,
+          background: 'linear-gradient(90deg, #ffd600 0%, #81c784 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          mb: 1
+        }}>
           {jokerEligibleIdx !== null
             ? `Joker Seçimi: ${jokerEligibleIdx === 0 ? 'Kullanıcı' : `Bot ${jokerEligibleIdx}`}`
             : 'Joker Seç!'}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, mt: 1, justifyContent: 'center' }}>
-            <Button
-              variant="contained"
-              sx={{
-                m: 1,
-                fontSize: 32,
-                width: 64,
-                height: 64,
-                minWidth: 0,
-                minHeight: 0,
-                borderRadius: '50%',
-                backgroundColor: '#2e7d32',
-                color: '#fff',
-                '&:hover': { backgroundColor: '#388e3c' }
-              }}
-              onClick={() => {
-                setJokerDialogOpen(false);
-                setPendingMuteIdx(jokerEligibleIdx);
-                setMuteTargetDialogOpen(true);
-              }}
-              title="Sustur: Bir rakibini 1 tur susturabilirsin."
-            >
-              🤫
-            </Button>
-            <Button
-              variant="contained"
-              sx={{
-                m: 1,
-                fontSize: 32,
-                width: 64,
-                height: 64,
-                minWidth: 0,
-                minHeight: 0,
-                borderRadius: '50%',
-                backgroundColor: '#2e7d32',
-                color: '#fff',
-                '&:hover': { backgroundColor: '#388e3c' }
-              }}
-              onClick={() => {
-                setJokerDialogOpen(false);
-                setX3List((prev) => [...prev, { idx: jokerEligibleIdx }]);
-              }}
-              title="3X: Bir sonraki turda puanın 3 katı yazılır."
-            >
-              🚀
-            </Button>
-            <Button
-              variant="contained"
-              sx={{
-                m: 1,
-                fontSize: 32,
-                width: 64,
-                height: 64,
-                minWidth: 0,
-                minHeight: 0,
-                borderRadius: '50%',
-                backgroundColor: '#2e7d32',
-                color: '#fff',
-                '&:hover': { backgroundColor: '#388e3c' }
-              }}
-              onClick={() => {
-                setHintDialogOpen(true);
-                setJokerDialogOpen(false);
-              }}
-              title="İpucu: Bir sayının hangi kartta olduğunu öğren."
-            >
-              💡
-            </Button>
+          <Box sx={{ display: 'flex', flexDirection: 'row', gap: 4, mt: 2, justifyContent: 'center' }}>
+            {/* Joker: Sustur */}
+            <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Button
+                variant="text"
+                sx={{
+                  m: 1,
+                  fontSize: 56,
+                  width: 80,
+                  height: 80,
+                  minWidth: 0,
+                  minHeight: 0,
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle at 60% 40%, #e0f7fa 60%, #b2dfdb 100%)',
+                  color: '#2e7d32',
+                  boxShadow: '0 4px 16px 0 #b2dfdb',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': {
+                    background: 'radial-gradient(circle at 60% 40%, #ffd600 60%, #ffb300 100%)',
+                    transform: 'scale(1.15) rotate(-8deg)',
+                    boxShadow: '0 8px 32px 0 #ffd600',
+                  },
+                  fontFamily: 'Underdog, sans-serif',
+                }}
+                onClick={() => {
+                  setJokerDialogOpen(false);
+                  setPendingMuteIdx(jokerEligibleIdx);
+                  setMuteTargetDialogOpen(true);
+                }}
+                onMouseEnter={() => setTooltipOpen('mute')}
+                onMouseLeave={() => setTooltipOpen(null)}
+              >
+                🤫
+              </Button>
+              {tooltipOpen === 'mute' && (
+                <Box sx={{
+                  position: 'absolute',
+                  top: 90,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  minWidth: 180,
+                  bgcolor: '#fff',
+                  color: '#2e7d32',
+                  borderRadius: 2,
+                  boxShadow: '0 4px 16px 0 #b2dfdb',
+                  p: 2,
+                  fontFamily: 'Underdog, sans-serif',
+                  fontWeight: 'bold',
+                  fontSize: 16,
+                  zIndex: 10,
+                  textAlign: 'center',
+                  border: '2px solid #b2dfdb',
+                  pointerEvents: 'none',
+                  transition: 'opacity 0.2s',
+                }}>
+                  Sustur: Bir rakibini 1 tur susturabilirsin.
+                </Box>
+              )}
+            </Box>
+            {/* Joker: 3X */}
+            <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Button
+                variant="text"
+                sx={{
+                  m: 1,
+                  fontSize: 56,
+                  width: 80,
+                  height: 80,
+                  minWidth: 0,
+                  minHeight: 0,
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle at 60% 40%, #fffde7 60%, #ffe082 100%)',
+                  color: '#ff9800',
+                  boxShadow: '0 4px 16px 0 #ffe082',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': {
+                    background: 'radial-gradient(circle at 60% 40%, #81c784 60%, #388e3c 100%)',
+                    color: '#fff',
+                    transform: 'scale(1.15) rotate(8deg)',
+                    boxShadow: '0 8px 32px 0 #81c784',
+                  },
+                  fontFamily: 'Underdog, sans-serif',
+                }}
+                onClick={() => {
+                  setJokerDialogOpen(false);
+                  setX3List((prev) => [...prev, { idx: jokerEligibleIdx }]);
+                }}
+                onMouseEnter={() => setTooltipOpen('x3')}
+                onMouseLeave={() => setTooltipOpen(null)}
+              >
+                🚀
+              </Button>
+              {tooltipOpen === 'x3' && (
+                <Box sx={{
+                  position: 'absolute',
+                  top: 90,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  minWidth: 180,
+                  bgcolor: '#fff',
+                  color: '#ff9800',
+                  borderRadius: 2,
+                  boxShadow: '0 4px 16px 0 #ffe082',
+                  p: 2,
+                  fontFamily: 'Underdog, sans-serif',
+                  fontWeight: 'bold',
+                  fontSize: 16,
+                  zIndex: 10,
+                  textAlign: 'center',
+                  border: '2px solid #ffe082',
+                  pointerEvents: 'none',
+                  transition: 'opacity 0.2s',
+                }}>
+                  3X: Bir sonraki turda puanın 3 katı yazılır.
+                </Box>
+              )}
+            </Box>
+            {/* Joker: İpucu */}
+            <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Button
+                variant="text"
+                sx={{
+                  m: 1,
+                  fontSize: 56,
+                  width: 80,
+                  height: 80,
+                  minWidth: 0,
+                  minHeight: 0,
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle at 60% 40%, #e1bee7 60%, #ba68c8 100%)',
+                  color: '#6a1b9a',
+                  boxShadow: '0 4px 16px 0 #ba68c8',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': {
+                    background: 'radial-gradient(circle at 60% 40%, #b2dfdb 60%, #009688 100%)',
+                    color: '#fff',
+                    transform: 'scale(1.15) rotate(4deg)',
+                    boxShadow: '0 8px 32px 0 #009688',
+                  },
+                  fontFamily: 'Underdog, sans-serif',
+                }}
+                onClick={() => {
+                  setHintDialogOpen(true);
+                  setJokerDialogOpen(false);
+                }}
+                onMouseEnter={() => setTooltipOpen('hint')}
+                onMouseLeave={() => setTooltipOpen(null)}
+              >
+                💡
+              </Button>
+              {tooltipOpen === 'hint' && (
+                <Box sx={{
+                  position: 'absolute',
+                  top: 90,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  minWidth: 180,
+                  bgcolor: '#fff',
+                  color: '#6a1b9a',
+                  borderRadius: 2,
+                  boxShadow: '0 4px 16px 0 #ba68c8',
+                  p: 2,
+                  fontFamily: 'Underdog, sans-serif',
+                  fontWeight: 'bold',
+                  fontSize: 16,
+                  zIndex: 10,
+                  textAlign: 'center',
+                  border: '2px solid #ba68c8',
+                  pointerEvents: 'none',
+                  transition: 'opacity 0.2s',
+                }}>
+                  İpucu: Bir sayının hangi kartta olduğunu öğren.
+                </Box>
+              )}
+            </Box>
           </Box>
+          <Typography sx={{
+            mt: 3,
+            textAlign: 'center',
+            fontFamily: 'Underdog, sans-serif',
+            fontWeight: 'bold',
+            fontSize: 18,
+            color: '#2e7d32',
+            letterSpacing: 1.1,
+            textShadow: '0 2px 8px #b2dfdb',
+            transition: 'color 0.2s',
+          }}>
+            Jokerlerden birini seç!
+          </Typography>
         </DialogContent>
       </Dialog>
-      <Dialog open={muteTargetDialogOpen} onClose={() => setMuteTargetDialogOpen(false)}>
-        <DialogTitle>Hangi rakibini susturmak istersin?</DialogTitle>
+      <Dialog open={muteTargetDialogOpen} onClose={() => setMuteTargetDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            minWidth: 340,
+            minHeight: 180,
+            px: 3,
+            py: 2,
+            borderRadius: 4,
+            // Geri al: sade arka plan ve önceki renk geçişli butonlar
+            background: undefined,
+            boxShadow: undefined,
+            '@media (max-width:600px)': {
+              minWidth: 0,
+              width: '95vw',
+              px: 1,
+            },
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          textAlign: 'center',
+          fontFamily: 'Underdog, sans-serif',
+          fontWeight: 'bold',
+          fontSize: 24,
+          color: '#d32f2f',
+          letterSpacing: 1.2,
+          background: 'linear-gradient(90deg, #ffd600 0%, #e57373 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          mb: 1
+        }}>
+          Hangi rakibini susturmak istersin?
+        </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center', mt: 1 }}>
             {Array.from({ length: playerCount })
               .map((_, idx) => idx)
               .filter(idx => idx !== pendingMuteIdx)
@@ -402,12 +579,31 @@ export default function IlkKapanin({ playType }) {
                 <Button
                   key={idx}
                   variant="contained"
-                  color="error"
-                  sx={{ m: 1 }}
+                  sx={{
+                    m: 1,
+                    fontSize: 22,
+                    width: 180,
+                    py: 1.5,
+                    borderRadius: 3,
+                    background: 'linear-gradient(90deg, #e57373 0%, #ffd600 100%)',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    fontFamily: 'Underdog, sans-serif',
+                    boxShadow: '0 4px 16px 0 #ffd600',
+                    letterSpacing: 1.1,
+                    transition: 'transform 0.18s, box-shadow 0.18s',
+                    '&:hover': {
+                      background: 'linear-gradient(90deg, #ffd600 0%, #e57373 100%)',
+                      color: '#d32f2f',
+                      transform: 'scale(1.08)',
+                      boxShadow: '0 8px 32px 0 #e57373',
+                    },
+                  }}
                   onClick={() => {
                     setMuteTargetDialogOpen(false);
                     setPendingMuteIdx(null);
                   }}
+                  startIcon={<span style={{fontSize: 28, marginRight: 8}}>🤫</span>}
                 >
                   {idx === 0 ? 'Kullanıcı' : `Bot ${idx}`}
                 </Button>
@@ -415,22 +611,85 @@ export default function IlkKapanin({ playType }) {
           </Box>
         </DialogContent>
       </Dialog>
-      <Dialog open={hintDialogOpen} onClose={() => setHintDialogOpen(false)}>
-        <DialogTitle>Hangi sayının yerini görmek istiyorsunuz?</DialogTitle>
+      <Dialog open={hintDialogOpen} onClose={() => setHintDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            minWidth: 340,
+            minHeight: 180,
+            px: 3,
+            py: 2,
+            borderRadius: 4,
+            background: 'linear-gradient(90deg, #e1bee7 0%, #ba68c8 100%)',
+            boxShadow: '0 8px 32px 0 #ba68c8',
+            '@media (max-width:600px)': {
+              minWidth: 0,
+              width: '95vw',
+              px: 1,
+            },
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          textAlign: 'center',
+          fontFamily: 'Underdog, sans-serif',
+          fontWeight: 'bold',
+          fontSize: 24,
+          color: '#fff',
+          letterSpacing: 1.2,
+          background: 'linear-gradient(90deg, #ba68c8 0%, #e1bee7 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          mb: 1,
+          textShadow: '0 2px  #e1bee7',
+        }}>
+          Hangi sayının yerini görmek istiyorsunuz?
+        </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center', mt: 1 }}>
             <input
               type="number"
               min="1"
               max="99"
               value={hintNumber || ''}
               onChange={(e) => setHintNumber(e.target.value)}
-              style={{ padding: '8px', fontSize: '16px' }}
+              style={{
+                padding: '12px',
+                fontSize: '20px',
+                borderRadius: '8px',
+                border: '2px solid #ba68c8',
+                outline: 'none',
+                fontFamily: 'Underdog, sans-serif',
+                width: 120,
+                textAlign: 'center',
+                marginBottom: 8,
+                background: 'linear-gradient(90deg, #f3e5f5 0%, #e1bee7 100%)',
+                color: '#6a1b9a',
+                fontWeight: 'bold',
+              }}
             />
             <Button
               variant="contained"
-              color="primary"
+              sx={{
+                background: 'linear-gradient(90deg, #ba68c8 0%, #6a1b9a 100%)',
+                color: '#fff',
+                fontWeight: 'bold',
+                fontFamily: 'Underdog, sans-serif',
+                fontSize: 18,
+                px: 4,
+                py: 1.5,
+                borderRadius: 3,
+                boxShadow: '0 4px 16px 0 #ba68c8',
+                letterSpacing: 1.1,
+                transition: 'transform 0.18s, box-shadow 0.18s, background 0.18s',
+                '&:hover': {
+                  background: 'linear-gradient(90deg, #6a1b9a 0%, #ba68c8 100%)',
+                  color: '#fffde7',
+                  transform: 'scale(1.08)',
+                  boxShadow: '0 8px 32px 0 #6a1b9a',
+                },
+              }}
               onClick={handleHintConfirm}
+              startIcon={<span style={{fontSize: 24, marginRight: 6}}>💡</span>}
             >
               Onayla
             </Button>

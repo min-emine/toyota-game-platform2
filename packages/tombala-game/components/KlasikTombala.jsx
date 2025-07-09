@@ -36,7 +36,7 @@ function generateRandomCard() {
   ];
 }
 
-export default function KlasikTombala({ playType }) {
+export default function KlasikTombala({ playType, notify }) {
   const [playerCount, setPlayerCount] = useState(null);
   const [cards, setCards] = useState([]);
   const [drawnNumbers, setDrawnNumbers] = useState([]);
@@ -53,6 +53,7 @@ export default function KlasikTombala({ playType }) {
   const [completedRows, setCompletedRows] = useState(0);
   const [isTombala, setIsTombala] = useState(false);
   const [gameFinished, setGameFinished] = useState(false);
+  const hasNotifiedGameStart = React.useRef(false);
 
   useEffect(() => {
     const fetchUserLobbies = async () => {
@@ -138,13 +139,36 @@ export default function KlasikTombala({ playType }) {
           if (data.allCards) setAllCards(data.allCards);
           if (data.notifications && data.notifications.length > 0) {
             setNotifications((prev) => [...prev, ...data.notifications]);
+            if (
+              notify &&
+              playType === 'lobby' &&
+              data.turnCount === 0 &&
+              data.drawnNumbers.length === 0 &&
+              !hasNotifiedGameStart.current
+            ) {
+              notify({
+                message: `Klasik Tombala başladı! (Lobi: ${userLobbies.find(l=>l.code===selectedLobby)?.name || selectedLobby})`,
+                playSound: document.hidden,
+                changeTitle: document.hidden,
+                showToast: !document.hidden,
+              });
+              hasNotifiedGameStart.current = true;
+            }
           }
+        }
+        if (data.type === 'lobby-join' && notify && playType === 'lobby') {
+          notify({
+            message: `${data.username || 'Bir oyuncu'} lobiye katıldı!`,
+            playSound: document.hidden,
+            changeTitle: document.hidden,
+            showToast: !document.hidden,
+          });
         }
       };
       setSocket(ws);
       return () => ws.close();
     }
-  }, [playType, selectedLobby, lobbyUsers]);
+  }, [playType, selectedLobby, lobbyUsers, notify]);
 
   const drawNumber = () => {
     if (playType === 'lobby' && socket && socket.readyState === 1) {

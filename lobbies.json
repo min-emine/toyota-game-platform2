@@ -1,36 +1,38 @@
 {
-  "XGWZY0": {
-    "name": "lobi4",
-    "createdAt": 1749378739369,
+  "XUUHPK": {
+    "name": "ablanın lobisi",
+    "createdAt": 1751540318906,
     "participants": [
-      "cc75989ffed75554"
+      "f14fa50ad7f42499",
+      "dc963d57d31f2971",
+      "7a7c52b216e82966"
     ]
   },
-  "UKD9WV": {
-    "name": "fds",
-    "createdAt": 1749380795403,
+  "241QZI": {
+    "name": "babanın lobisi",
+    "type": "normal",
+    "password": "12345",
+    "gameId": 1,
+    "ownerId": "dc963d57d31f2971",
+    "createdAt": 1751544266987,
     "participants": [
-      "cc75989ffed75554",
-      "6799b422dce96c61",
-      "b0a8204ed7bd9468",
-      "eefc19890a218203"
-    ]
+      "dc963d57d31f2971",
+      "f14fa50ad7f42499",
+      "f61b3e1efb5442ea"
+    ],
+    "closedAt": null
   },
-  "GFGHL6": {
-    "name": "neneninlobisi",
-    "createdAt": 1749402839100,
+  "DCTOWW": {
+    "name": "etkinlik",
+    "type": "event",
+    "eventStart": "2025-07-03T15:55",
+    "eventEnd": "2025-07-03T16:55",
+    "gameId": 1,
+    "ownerId": "f14fa50ad7f42499",
+    "createdAt": 1751547348455,
     "participants": [
-      "cc75989ffed75554",
-      "6799b422dce96c61"
-    ]
-  },
-  "S26KR7": {
-    "name": "abininlobisi",
-    "createdAt": 1749461663048,
-    "participants": [
-      "cc75989ffed75554",
-      "6799b422dce96c61",
-      "34cfea69c993d769"
-    ]
+      "f14fa50ad7f42499"
+    ],
+    "closedAt": null
   }
 }

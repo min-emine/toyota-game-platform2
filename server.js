@@ -97,20 +97,85 @@ app.post('/login', (req, res) => {
 
 app.post('/create-lobby', (req, res) => {
   try {
-    const { lobbyName } = req.body;
+    const { lobbyName, lobbyType, eventStart, eventEnd, lobbyPassword, gameId, userId } = req.body;
     if (!lobbyName) {
       return res.status(400).json({ error: 'Lobi adı gereklidir.' });
+    }
+    if (!lobbyType) {
+      return res.status(400).json({ error: 'Lobi türü gereklidir.' });
+    }
+    if (lobbyType === 'event' && (!eventStart || !eventEnd)) {
+      return res.status(400).json({ error: 'Etkinlik için başlangıç ve bitiş tarihi/saat gereklidir.' });
+    }
+    // Her kullanıcının 1 lobisi olabilir kuralı
+    for (const code in lobbies) {
+      if (lobbies[code].ownerId === userId) {
+        delete lobbies[code];
+      }
     }
     const lobbyCode = generateLobbyCode();
     lobbies[lobbyCode] = {
       name: lobbyName,
+      type: lobbyType,
+      eventStart: lobbyType === 'event' ? eventStart : undefined,
+      eventEnd: lobbyType === 'event' ? eventEnd : undefined,
+      password: lobbyPassword || undefined,
+      gameId: gameId || undefined,
+      ownerId: userId,
       createdAt: Date.now(),
+      participants: [userId],
+      closedAt: null,
     };
     saveLobbies(lobbies);
     res.status(201).json({ message: 'Lobi başarıyla oluşturuldu.', lobbyCode });
   } catch (error) {
     console.error('Lobi oluşturulurken bir hata oluştu:', error);
     res.status(500).json({ error: 'Lobi oluşturulamadı. Sunucu hatası.' });
+  }
+});
+
+app.post('/update-lobby', (req, res) => {
+  try {
+    const { lobbyCode, lobbyName, lobbyType, eventStart, eventEnd, lobbyPassword, gameId, userId } = req.body;
+    if (!lobbyCode || !lobbies[lobbyCode]) {
+      return res.status(404).json({ error: 'Lobi bulunamadı.' });
+    }
+    const lobby = lobbies[lobbyCode];
+    if (lobby.ownerId !== userId) {
+      return res.status(403).json({ error: 'Sadece lobi sahibi düzenleyebilir.' });
+    }
+    if (lobbyName) lobby.name = lobbyName;
+    if (lobbyType) lobby.type = lobbyType;
+    if (lobbyType === 'event') {
+      if (eventStart) lobby.eventStart = eventStart;
+      if (eventEnd) lobby.eventEnd = eventEnd;
+    } else {
+      lobby.eventStart = undefined;
+      lobby.eventEnd = undefined;
+    }
+    if (lobbyPassword !== undefined) lobby.password = lobbyPassword;
+    if (gameId !== undefined) lobby.gameId = gameId;
+    saveLobbies(lobbies);
+    res.status(200).json({ message: 'Lobi güncellendi.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Lobi güncellenemedi.' });
+  }
+});
+
+app.post('/delete-lobby', (req, res) => {
+  try {
+    const { lobbyCode, userId } = req.body;
+    if (!lobbyCode || !lobbies[lobbyCode]) {
+      return res.status(404).json({ error: 'Lobi bulunamadı.' });
+    }
+    if (lobbies[lobbyCode].ownerId !== userId) {
+      return res.status(403).json({ error: 'Sadece lobi sahibi silebilir.' });
+    }
+    delete lobbies[lobbyCode];
+    saveLobbies(lobbies);
+    res.status(200).json({ message: 'Lobi silindi.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Lobi silinemedi.' });
   }
 });
 
@@ -127,15 +192,36 @@ app.post('/join-lobby', (req, res) => {
     if (!lobby.participants) {
       lobby.participants = []; 
     }
+    let isNewJoin = false;
     if (!lobby.participants.includes(userId)) {
       lobby.participants.push(userId); 
       saveLobbies(lobbies); 
+      isNewJoin = true;
     }
 
     const participantNames = lobby.participants.map((participantId) => {
       const user = Object.values(users).find((user) => user.userId === participantId);
       return user ? user.username : 'Unknown';
     });
+
+    // Bildirim: lobiye yeni biri katıldıysa WebSocket ile gönder
+    if (isNewJoin && typeof wss !== 'undefined') {
+      wss.clients.forEach((client) => {
+        if (
+          client.readyState === 1 &&
+          client.lobbyCode === lobbyCode &&
+          client.userId !== userId
+        ) {
+          client.send(
+            JSON.stringify({
+              type: 'lobby-join',
+              userId,
+              username: users[userId]?.username || 'Bir oyuncu',
+            })
+          );
+        }
+      });
+    }
 
     res.status(200).json({ 
       message: 'Lobiye başarıyla katıldınız.', 
@@ -174,8 +260,18 @@ app.post('/leave-lobby', (req, res) => {
 app.get('/lobbies', (req, res) => {
   try {
     cleanUpExpiredLobbies();
+    const now = Date.now();
     const lobbiesWithNames = {};
     for (const [code, lobby] of Object.entries(lobbies)) {
+      // Normal lobi: kurucu çıktıysa ve 8 saat geçtiyse gösterme
+      if (lobby.type === 'normal' && lobby.ownerId && (!lobby.participants || !lobby.participants.includes(lobby.ownerId))) {
+        if (!lobby.closedAt) lobby.closedAt = now;
+        if (now - lobby.closedAt > 8 * 60 * 60 * 1000) continue;
+      } else if (lobby.type === 'normal') {
+        lobby.closedAt = null;
+      }
+      // Etkinlik lobisi: bitiş tarihine kadar görünür, en başta
+      // (Sıralama frontend'de yapılabilir, burada sadece veriyi sağlıyoruz)
       const participantNames = (lobby.participants || []).map((participantId) => {
         const user = Object.values(users).find((user) => user.userId === participantId);
         return user ? user.username : 'Unknown';

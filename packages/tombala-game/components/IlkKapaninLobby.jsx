@@ -16,7 +16,7 @@ function generateRandomCard() {
   ];
 }
 
-export default function IlkKapaninLobby({}) {
+export default function IlkKapaninLobby({ notify }) {
   const userId = localStorage.getItem('userId');
   const username = localStorage.getItem('username');
   const [drawnNumbers, setDrawnNumbers] = useState([]);
@@ -46,6 +46,7 @@ export default function IlkKapaninLobby({}) {
   const [chatOpen, setChatOpen] = useState(false);
   const [hasUnreadChat, setHasUnreadChat] = useState(false);
   const notificationAudioRef = React.useRef(null);
+  const hasNotifiedGameStart = React.useRef(false);
 
   useEffect(() => {
     const fetchUserLobbies = async () => {
@@ -137,6 +138,20 @@ export default function IlkKapaninLobby({}) {
         setStarNumbers(data.starNumbers || []);
         if (Array.isArray(data.allCards) && data.allCards.length > 0 && data.scores && data.currentPlayer) {
           setGameStarted(true);
+          if (
+            notify &&
+            data.turnCount === 0 &&
+            data.drawnNumbers.length === 0 &&
+            !hasNotifiedGameStart.current
+          ) {
+            notify({
+              message: `İlk Kapanın başladı! (Lobi: ${userLobbies.find(l=>l.code===selectedLobby)?.name || selectedLobby})`,
+              playSound: document.hidden,
+              changeTitle: document.hidden,
+              showToast: !document.hidden,
+            });
+            hasNotifiedGameStart.current = true;
+          }
         } else {
           setGameStarted(false);
         }
@@ -148,6 +163,14 @@ export default function IlkKapaninLobby({}) {
           }
           setShuffledNumbers(arr);
         }
+      }
+      if (data.type === 'lobby-join' && notify) {
+        notify({
+          message: `${data.username || 'Bir oyuncu'} lobiye katıldı!`,
+          playSound: document.hidden,
+          changeTitle: document.hidden,
+          showToast: !document.hidden,
+        });
       }
       if (data.type === 'joker-select') {
         setJokerDialogOpen(true);
@@ -169,7 +192,7 @@ export default function IlkKapaninLobby({}) {
     ws.onerror = () => setGameStarted(false);
     ws.onclose = () => setGameStarted(false);
     return () => ws.close();
-  }, [selectedLobby, userId]);
+  }, [selectedLobby, userId, notify]);
 
   const isMyTurn = currentPlayer === userId;
   const handleCardClick = (num) => {
@@ -222,44 +245,285 @@ export default function IlkKapaninLobby({}) {
   };
 
   const renderJokerDialog = () => (
-    <Dialog open={jokerDialogOpen} onClose={() => {}} disableEscapeKeyDown>
-      <DialogTitle>Joker Seçimi</DialogTitle>
+    <Dialog open={jokerDialogOpen} onClose={() => {}} disableEscapeKeyDown
+      PaperProps={{
+        sx: {
+          minWidth: 490,
+          minHeight: 340,
+          px: 3,
+          py: 2,
+          borderRadius: 4,
+          '@media (max-width:600px)': {
+            minWidth: 0,
+            width: '95vw',
+            px: 1,
+          },
+        }
+      }}
+    >
+      <DialogTitle sx={{
+        textAlign: 'center',
+        fontFamily: 'Underdog, sans-serif',
+        fontWeight: 'bold',
+        fontSize: 28,
+        color: '#2e7d32',
+        letterSpacing: 1.5,
+        background: 'linear-gradient(90deg, #ffd600 0%, #81c784 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        mb: 1
+      }}>
+        Joker Seçimi
+      </DialogTitle>
       <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, mt: 1, justifyContent: 'center' }}>
-          <Button
-            variant="contained"
-            sx={{ m: 1, fontSize: 32, width: 64, height: 64, borderRadius: '50%', backgroundColor: '#2e7d32', color: '#fff' }}
-            onClick={() => { setJokerType('mute'); setJokerDialogOpen(false); setMuteTargetDialogOpen(true); }}
-            title="Sustur: Bir rakibini 1 tur susturabilirsin."
-          >🤫</Button>
-          <Button
-            variant="contained"
-            sx={{ m: 1, fontSize: 32, width: 64, height: 64, borderRadius: '50%', backgroundColor: '#2e7d32', color: '#fff' }}
-            onClick={() => {
-              sendJokerAction('x3');
-              setJokerDialogOpen(false);
-            }}
-            title="3X: Bir sonraki turda puanın 3 katı yazılır."
-          >🚀</Button>
-          <Button
-            variant="contained"
-            sx={{ m: 1, fontSize: 32, width: 64, height: 64, borderRadius: '50%', backgroundColor: '#2e7d32', color: '#fff' }}
-            onClick={() => { setJokerType('hint'); setJokerDialogOpen(false); setHintDialogOpen(true); }}
-            title="İpucu: Bir sayının hangi kartta olduğunu öğren."
-          >💡</Button>
+        <Box sx={{ display: 'flex', flexDirection: 'row', gap: 4, mt: 2, justifyContent: 'center' }}>
+          {/* Joker: Sustur */}
+          <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Button
+              variant="text"
+              sx={{
+                m: 1,
+                fontSize: 56,
+                width: 80,
+                height: 80,
+                minWidth: 0,
+                minHeight: 0,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle at 60% 40%, #e0f7fa 60%, #b2dfdb 100%)',
+                color: '#2e7d32',
+                boxShadow: '0 4px 16px 0 #b2dfdb',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  background: 'radial-gradient(circle at 60% 40%, #ffd600 60%, #ffb300 100%)',
+                  transform: 'scale(1.15) rotate(-8deg)',
+                  boxShadow: '0 8px 32px 0 #ffd600',
+                },
+                fontFamily: 'Underdog, sans-serif',
+              }}
+              onClick={() => { setJokerType('mute'); setJokerDialogOpen(false); setMuteTargetDialogOpen(true); }}
+              onMouseEnter={() => setJokerType('mute')}
+              onMouseLeave={() => setJokerType(null)}
+            >
+              🤫
+            </Button>
+            {jokerType === 'mute' && (
+              <Box sx={{
+                position: 'absolute',
+                top: 90,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                minWidth: 180,
+                bgcolor: '#fff',
+                color: '#2e7d32',
+                borderRadius: 2,
+                boxShadow: '0 4px 16px 0 #b2dfdb',
+                p: 2,
+                fontFamily: 'Underdog, sans-serif',
+                fontWeight: 'bold',
+                fontSize: 16,
+                zIndex: 10,
+                textAlign: 'center',
+                border: '2px solid #b2dfdb',
+                pointerEvents: 'none',
+                transition: 'opacity 0.2s',
+              }}>
+                Sustur: Bir rakibini 1 tur susturabilirsin.
+              </Box>
+            )}
+          </Box>
+          {/* Joker: 3X */}
+          <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Button
+              variant="text"
+              sx={{
+                m: 1,
+                fontSize: 56,
+                width: 80,
+                height: 80,
+                minWidth: 0,
+                minHeight: 0,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle at 60% 40%, #fffde7 60%, #ffe082 100%)',
+                color: '#ff9800',
+                boxShadow: '0 4px 16px 0 #ffe082',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  background: 'radial-gradient(circle at 60% 40%, #81c784 60%, #388e3c 100%)',
+                  color: '#fff',
+                  transform: 'scale(1.15) rotate(8deg)',
+                  boxShadow: '0 8px 32px 0 #81c784',
+                },
+                fontFamily: 'Underdog, sans-serif',
+              }}
+              onClick={() => { sendJokerAction('x3'); setJokerDialogOpen(false); }}
+              onMouseEnter={() => setJokerType('x3')}
+              onMouseLeave={() => setJokerType(null)}
+            >
+              🚀
+            </Button>
+            {jokerType === 'x3' && (
+              <Box sx={{
+                position: 'absolute',
+                top: 90,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                minWidth: 180,
+                bgcolor: '#fff',
+                color: '#ff9800',
+                borderRadius: 2,
+                boxShadow: '0 4px 16px 0 #ffe082',
+                p: 2,
+                fontFamily: 'Underdog, sans-serif',
+                fontWeight: 'bold',
+                fontSize: 16,
+                zIndex: 10,
+                textAlign: 'center',
+                border: '2px solid #ffe082',
+                pointerEvents: 'none',
+                transition: 'opacity 0.2s',
+              }}>
+                3X: Bir sonraki turda puanın 3 katı yazılır.
+              </Box>
+            )}
+          </Box>
+          {/* Joker: İpucu */}
+          <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Button
+              variant="text"
+              sx={{
+                m: 1,
+                fontSize: 56,
+                width: 80,
+                height: 80,
+                minWidth: 0,
+                minHeight: 0,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle at 60% 40%, #e1bee7 60%, #ba68c8 100%)',
+                color: '#6a1b9a',
+                boxShadow: '0 4px 16px 0 #ba68c8',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  background: 'radial-gradient(circle at 60% 40%, #b2dfdb 60%, #009688 100%)',
+                  color: '#fff',
+                  transform: 'scale(1.15) rotate(4deg)',
+                  boxShadow: '0 8px 32px 0 #009688',
+                },
+                fontFamily: 'Underdog, sans-serif',
+              }}
+              onClick={() => { setJokerType('hint'); setJokerDialogOpen(false); setHintDialogOpen(true); }}
+              onMouseEnter={() => setJokerType('hint')}
+              onMouseLeave={() => setJokerType(null)}
+            >
+              💡
+            </Button>
+            {jokerType === 'hint' && (
+              <Box sx={{
+                position: 'absolute',
+                top: 90,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                minWidth: 180,
+                bgcolor: '#fff',
+                color: '#6a1b9a',
+                borderRadius: 2,
+                boxShadow: '0 4px 16px 0 #ba68c8',
+                p: 2,
+                fontFamily: 'Underdog, sans-serif',
+                fontWeight: 'bold',
+                fontSize: 16,
+                zIndex: 10,
+                textAlign: 'center',
+                border: '2px solid #ba68c8',
+                pointerEvents: 'none',
+                transition: 'opacity 0.2s',
+              }}>
+                İpucu: Bir sayının hangi kartta olduğunu öğren.
+              </Box>
+            )}
+          </Box>
         </Box>
+        <Typography sx={{
+          mt: 3,
+          textAlign: 'center',
+          fontFamily: 'Underdog, sans-serif',
+          fontWeight: 'bold',
+          fontSize: 18,
+          color: '#2e7d32',
+          letterSpacing: 1.1,
+          textShadow: '0 2px 8px #b2dfdb',
+          transition: 'color 0.2s',
+        }}>
+          Jokerlerden birini seç!
+        </Typography>
       </DialogContent>
     </Dialog>
   );
 
   const renderMuteTargetDialog = () => (
-    <Dialog open={muteTargetDialogOpen} onClose={() => setMuteTargetDialogOpen(false)}>
-      <DialogTitle>Hangi rakibini susturmak istersin?</DialogTitle>
+    <Dialog open={muteTargetDialogOpen} onClose={() => setMuteTargetDialogOpen(false)}
+      PaperProps={{
+        sx: {
+          minWidth: 390,
+          minHeight: 220,
+          px: 3,
+          py: 2,
+          borderRadius: 4,
+          '@media (max-width:600px)': {
+            minWidth: 0,
+            width: '95vw',
+            px: 1,
+          },
+        }
+      }}
+    >
+      <DialogTitle sx={{
+        textAlign: 'center',
+        fontFamily: 'Underdog, sans-serif',
+        fontWeight: 'bold',
+        fontSize: 24,
+        letterSpacing: 1.2,
+        background: 'linear-gradient(90deg, #ffd600 0%, #ff5252 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        mb: 1
+      }}>
+        Hangi rakibini susturmak istersin?
+      </DialogTitle>
       <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, justifyContent: 'center', flexWrap: 'wrap', mt: 2 }}>
           {lobbyUsers.filter(u => u.userId !== userId).map(u => (
-            <Button key={u.userId} variant="contained" color="error" sx={{ m: 1 }} onClick={() => sendJokerAction('mute', u)}>
-              {u.username}
+            <Button
+              key={u.userId}
+              variant="text"
+              sx={{
+                fontSize: 38,
+                width: 72,
+                height: 72,
+                minWidth: 0,
+                minHeight: 0,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle at 60% 40%, #ffd600 60%, #ff5252 100%)',
+                color: '#fff',
+                boxShadow: '0 4px 16px 0 #ffd600',
+                fontFamily: 'Underdog, sans-serif',
+                fontWeight: 'bold',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mb: 1,
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  background: 'radial-gradient(circle at 60% 40%, #ff5252 60%, #ffd600 100%)',
+                  color: '#fff',
+                  transform: 'scale(1.12) rotate(-6deg)',
+                  boxShadow: '0 8px 32px 0 #ff5252',
+                },
+              }}
+              onClick={() => sendJokerAction('mute', u)}
+            >
+              <span style={{ fontSize: 38, marginBottom: 4 }}>🤫</span>
+              <span style={{ fontSize: 15, fontFamily: 'Underdog, sans-serif', color: '#fff', textShadow: '0 2px 8px #ff5252', marginTop: 2 }}>{u.username}</span>
             </Button>
           ))}
         </Box>
@@ -268,28 +532,94 @@ export default function IlkKapaninLobby({}) {
   );
 
   const renderHintDialog = () => (
-    <Dialog open={hintDialogOpen} onClose={() => setHintDialogOpen(false)}>
-      <DialogTitle>Hangi sayının yerini görmek istiyorsunuz?</DialogTitle>
+    <Dialog open={hintDialogOpen} onClose={() => setHintDialogOpen(false)}
+      PaperProps={{
+        sx: {
+          minWidth: 340,
+          minHeight: 180,
+          px: 3,
+          py: 2,
+          borderRadius: 4,
+          background: 'linear-gradient(135deg, #ba68c8 0%, #e1bee7 100%)',
+          '@media (max-width:600px)': {
+            minWidth: 0,
+            width: '95vw',
+            px: 1,
+          },
+        }
+      }}
+    >
+      <DialogTitle sx={{
+        textAlign: 'center',
+        fontFamily: 'Underdog, sans-serif',
+        fontWeight: 'bold',
+        fontSize: 22,
+        letterSpacing: 1.1,
+        color: '#fff',
+        textShadow: '0 2px 8px #6a1b9a',
+        mb: 1
+      }}>
+        Hangi sayının yerini görmek istiyorsun?
+      </DialogTitle>
       <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', mt: 1 }}>
           <TextField
             type="number"
             label="1-99"
             value={hintNumber}
             onChange={e => setHintNumber(e.target.value)}
-            inputProps={{ min: 1, max: 99 }}
+            inputProps={{ min: 1, max: 99, style: { fontFamily: 'Underdog, sans-serif', fontSize: 18, textAlign: 'center' } }}
+            sx={{
+              background: '#fff',
+              borderRadius: 2,
+              fontFamily: 'Underdog, sans-serif',
+              fontSize: 18,
+              width: 120,
+              '& .MuiInputBase-input': {
+                textAlign: 'center',
+                fontWeight: 'bold',
+                fontFamily: 'Underdog, sans-serif',
+                fontSize: 18,
+              },
+            }}
           />
-          <Button variant="contained" color="primary" onClick={() => {
-            const num = parseInt(hintNumber, 10);
-            if (num >= 1 && num <= 99 && !drawnNumbers.includes(num)) {
-              setDrawnNumbers(prev => prev.includes(num) ? prev : [...prev, num]);
-              setDrawnBy(prev => ({ ...prev, [num]: null }));
-              sendJokerAction('hint', num);
-            }
-            setHintDialogOpen(false);
-            setHintNumber('');
-          }}>
-            Onayla
+          <Button
+            variant="contained"
+            sx={{
+              mt: 1,
+              fontFamily: 'Underdog, sans-serif',
+              fontWeight: 'bold',
+              fontSize: 20,
+              borderRadius: 3,
+              background: 'linear-gradient(90deg, #8e24aa 0%, #ffd600 100%)',
+              color: '#fff',
+              px: 4,
+              py: 1.2,
+              boxShadow: '0 4px 16px 0 #ba68c8',
+              textTransform: 'none',
+              transition: 'background 0.2s, transform 0.2s',
+              '&:hover': {
+                background: 'linear-gradient(90deg, #ffd600 0%, #8e24aa 100%)',
+                color: '#fff',
+                transform: 'scale(1.08) rotate(-2deg)',
+                boxShadow: '0 8px 32px 0 #ffd600',
+              },
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.2,
+            }}
+            onClick={() => {
+              const num = parseInt(hintNumber, 10);
+              if (num >= 1 && num <= 99 && !drawnNumbers.includes(num)) {
+                setDrawnNumbers(prev => prev.includes(num) ? prev : [...prev, num]);
+                setDrawnBy(prev => ({ ...prev, [num]: null }));
+                sendJokerAction('hint', num);
+              }
+              setHintDialogOpen(false);
+              setHintNumber('');
+            }}
+          >
+            <span style={{ fontSize: 24, marginRight: 8 }}>💡</span> Onayla
           </Button>
         </Box>
       </DialogContent>

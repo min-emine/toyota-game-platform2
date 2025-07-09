@@ -27,6 +27,11 @@ import {
 } from '@mui/material';
 import GroupsIcon from '@mui/icons-material/Groups';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import TwitterIcon from '@mui/icons-material/Twitter';
+import FacebookIcon from '@mui/icons-material/Facebook';
+import dayjs from 'dayjs';
 
 const gamesWithBackgroundEffect = [
   { id: 1, name: 'Tombala', image: '/images/1.jpg' },
@@ -52,6 +57,13 @@ export default function Home() {
   const [selectedGameIdx, setSelectedGameIdx] = useState(0);
   const selectedGame = gamesWithBackgroundEffect[selectedGameIdx];
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  const [lobbyType, setLobbyType] = useState('normal');
+  const [eventStart, setEventStart] = useState('');
+  const [eventEnd, setEventEnd] = useState('');
+  const [lobbyPassword, setLobbyPassword] = useState('');
+  const [selectedGameId, setSelectedGameId] = useState(gamesWithBackgroundEffect[0].id);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [lobbyToDelete, setLobbyToDelete] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('themeMode', themeMode);
@@ -116,11 +128,27 @@ export default function Home() {
       alert('Lobi adı gereklidir.');
       return;
     }
+    if (!lobbyType) {
+      alert('Lobi türü gereklidir.');
+      return;
+    }
+    if (lobbyType === 'event' && (!eventStart || !eventEnd)) {
+      alert('Etkinlik için başlangıç ve bitiş tarihi/saat gereklidir.');
+      return;
+    }
     try {
       const response = await fetch('http://localhost:3003/create-lobby', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lobbyName }),
+        body: JSON.stringify({
+          lobbyName,
+          lobbyType,
+          eventStart: lobbyType === 'event' ? eventStart : undefined,
+          eventEnd: lobbyType === 'event' ? eventEnd : undefined,
+          lobbyPassword,
+          gameId: selectedGameId,
+          userId,
+        }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -199,6 +227,20 @@ export default function Home() {
   const handleGameClick = (gameId) => {
     navigate(`/game-details/${gameId}`); 
   };
+
+  const getCountdown = (end) => {
+    const diff = dayjs(end).diff(dayjs(), 'second');
+    if (diff <= 0) return 'Sona erdi';
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    const seconds = diff % 60;
+    return `${hours > 0 ? hours + 's ' : ''}${minutes}dk ${seconds}sn`;
+  };
+
+  const sortedLobbies = [
+    ...lobbies.filter(l => l.type === 'event').sort((a, b) => dayjs(a.eventStart).isAfter(dayjs(b.eventStart)) ? 1 : -1),
+    ...lobbies.filter(l => l.type !== 'event'),
+  ];
 
   return (
     <AppTheme mode={themeMode}>
@@ -402,25 +444,49 @@ export default function Home() {
               <Typography variant="h6">Lobiler</Typography>
             </ListItem>
             <Divider />
-            {lobbies.length > 0 ? (
-              lobbies.map((lobby) => (
-                <ListItem
-                  key={lobby.code}
-                  button
-                  onClick={() =>
-                    currentLobby?.name === lobby.name
-                      ? handleLeaveLobby(lobby.code)
-                      : handleJoinDialogOpen([lobby.code, lobby])
+            {sortedLobbies.length > 0 ? (
+              sortedLobbies.map((lobby) => {
+                const isOwner = lobby.ownerId === userId;
+                const isEvent = lobby.type === 'event';
+                const now = dayjs();
+                let eventInfo = '';
+                if (isEvent && lobby.eventStart && lobby.eventEnd) {
+                  const start = dayjs(lobby.eventStart);
+                  const end = dayjs(lobby.eventEnd);
+                  if (now.isBefore(start)) {
+                    if (start.diff(now, 'hour') >= 24) {
+                      eventInfo = `Başlangıç: ${start.format('DD.MM.YYYY HH:mm')}`;
+                    } else {
+                      eventInfo = `Başlamasına: ${getCountdown(start)}`;
+                    }
+                  } else if (now.isBefore(end)) {
+                    eventInfo = `Bitişe: ${getCountdown(end)}`;
+                  } else {
+                    eventInfo = 'Etkinlik sona erdi';
                   }
-                  sx={{
-                    backgroundColor: currentLobby?.name === lobby.name ? 'lightgreen' : 'inherit',
-                  }}
-                >
-                  <ListItemText
-                    primary={lobby.name}
-                    secondary={
-                      <>
-                        Katılımcı sayısı: {lobby.participants?.length || 0}
+                }
+                return (
+                  <ListItem
+                    key={lobby.code}
+                    {...(isOwner ? { button: true, onClick: () => { setLobbyToDelete(lobby); setDeleteDialogOpen(true); } } : {})}
+                    sx={{
+                      backgroundColor: currentLobby?.name === lobby.name ? 'lightgreen' : 'inherit',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      mb: 1,
+                      border: isEvent ? '2px solid #43e97b' : undefined,
+                      ...(isOwner ? {} : { opacity: 0.6 }),
+                    }}
+                  >
+                    <ListItemText
+                      primary={<>
+                        <span style={{ fontWeight: 600 }}>{lobby.name}</span>
+                        {isEvent && <span style={{ color: '#43e97b', marginLeft: 8 }}>[Etkinlik]</span>}
+                        {!isEvent && <span style={{ color: '#fa709a', marginLeft: 8 }}>[Normal]</span>}
+                        {lobby.password && <span style={{ color: '#ff9800', marginLeft: 8 }}>🔒</span>}
+                      </>}
+                      secondary={<>
+                        <div>Katılımcı: {lobby.participants?.length || 0}</div>
                         {lobby.participantNames && lobby.participantNames.length > 0 && (
                           <div style={{ fontSize: 12, marginTop: 4 }}>
                             {lobby.participantNames.map((name, i) => (
@@ -428,11 +494,13 @@ export default function Home() {
                             ))}
                           </div>
                         )}
-                      </>
-                    }
-                  />
-                </ListItem>
-              ))
+                        {lobby.gameId && <div>Oyun: {gamesWithBackgroundEffect.find(g => g.id === lobby.gameId)?.name || lobby.gameId}</div>}
+                        {eventInfo && <div style={{ color: '#43e97b', fontWeight: 500 }}>{eventInfo}</div>}
+                      </>}
+                    />
+                  </ListItem>
+                );
+              })
             ) : (
               <ListItem>
                 <ListItemText primary="Hiçbir lobi bulunamadı." />
@@ -523,10 +591,124 @@ export default function Home() {
               value={lobbyName}
               onChange={(e) => setLobbyName(e.target.value)}
             />
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2">Lobi Türü</Typography>
+              <Button
+                variant={lobbyType === 'normal' ? 'contained' : 'outlined'}
+                onClick={() => setLobbyType('normal')}
+                sx={{ mr: 1 }}
+              >
+                Normal
+              </Button>
+              <Button
+                variant={lobbyType === 'event' ? 'contained' : 'outlined'}
+                onClick={() => setLobbyType('event')}
+              >
+                Etkinlik
+              </Button>
+            </Box>
+            {lobbyType === 'event' && (
+              <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Başlangıç Tarihi/Saati"
+                  type="datetime-local"
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  value={eventStart}
+                  onChange={(e) => setEventStart(e.target.value)}
+                />
+                <TextField
+                  label="Bitiş Tarihi/Saati"
+                  type="datetime-local"
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  value={eventEnd}
+                  onChange={(e) => setEventEnd(e.target.value)}
+                />
+              </Box>
+            )}
+            <TextField
+              margin="dense"
+              label="Lobi Şifresi (opsiyonel)"
+              fullWidth
+              type="password"
+              value={lobbyPassword}
+              onChange={(e) => setLobbyPassword(e.target.value)}
+              sx={{ mt: 2 }}
+            />
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2">Oynanacak Oyun</Typography>
+              <Grid container spacing={1}>
+                {gamesWithBackgroundEffect.map((game) => (
+                  <Grid item key={game.id}>
+                    <Button
+                      variant={selectedGameId === game.id ? 'contained' : 'outlined'}
+                      onClick={() => setSelectedGameId(game.id)}
+                    >
+                      {game.name}
+                    </Button>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
             {lobbyCode && (
-              <Typography sx={{ mt: 2 }}>
-                Lobi Kodu: <strong>{lobbyCode}</strong>
-              </Typography>
+              <Box sx={{ mt: 2 }}>
+                <Typography>
+                  Lobi Kodu: <strong>{lobbyCode}</strong>
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<ContentCopyIcon />}
+                    onClick={() => {
+                      navigator.clipboard.writeText(lobbyCode);
+                      alert('Lobi kodu kopyalandı!');
+                    }}
+                  >
+                    Kodu Kopyala
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    color="success"
+                    startIcon={<WhatsAppIcon />}
+                    onClick={() => {
+                      const text = encodeURIComponent(`Seni buglıköy oyun lobime davet ediyorum! Lobi Kodu: ${lobbyCode}`);
+                      window.open(`https://wa.me/?text=${text}`, '_blank');
+                    }}
+                  >
+                    WhatsApp
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    color="primary"
+                    startIcon={<TwitterIcon />}
+                    onClick={() => {
+                      const text = encodeURIComponent(`Seni buglıköy oyun lobime davet ediyorum! Lobi Kodu: ${lobbyCode}`);
+                      window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+                    }}
+                  >
+                    Twitter
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    color="info"
+                    startIcon={<FacebookIcon />}
+                    onClick={() => {
+                      const text = encodeURIComponent(`Seni buglıköy oyun lobime davet ediyorum! Lobi Kodu: ${lobbyCode}`);
+                      window.open(`https://www.facebook.com/sharer/sharer.php?u=&quote=${text}`, '_blank');
+                    }}
+                  >
+                    Facebook
+                  </Button>
+                </Box>
+                <Typography sx={{ mt: 2, color: 'green' }}>
+                  Lobi başarıyla oluşturuldu! Katılmak için bu kodu paylaşabilirsin.
+                </Typography>
+              </Box>
             )}
           </DialogContent>
           <DialogActions>
@@ -552,6 +734,31 @@ export default function Home() {
           <DialogActions>
             <Button onClick={handleJoinDialogClose}>İptal</Button>
             <Button onClick={handleJoinLobby}>Katıl</Button>
+          </DialogActions>
+        </Dialog>
+        <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+          <DialogTitle>Lobiyi Sil</DialogTitle>
+          <DialogContent>
+            <Typography>{lobbyToDelete?.name} adlı lobiyi silmek istediğinize emin misiniz?</Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteDialogOpen(false)}>İptal</Button>
+            <Button color="error" onClick={async () => {
+              if (!lobbyToDelete) return;
+              const res = await fetch('http://localhost:3003/delete-lobby', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lobbyCode: lobbyToDelete.code, userId }),
+              });
+              if (res.ok) {
+                setLobbies(lobbies => lobbies.filter(l => l.code !== lobbyToDelete.code));
+                setDeleteDialogOpen(false);
+                setLobbyToDelete(null);
+                alert('Lobi silindi.');
+              } else {
+                alert('Lobi silinemedi!');
+              }
+            }}>Sil</Button>
           </DialogActions>
         </Dialog>
         <div

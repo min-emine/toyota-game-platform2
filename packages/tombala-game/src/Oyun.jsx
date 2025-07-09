@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Box, Fade, Slide, Button, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import logo from '../logo5.png';
@@ -6,17 +6,62 @@ import ModeSelector from '../components/ModeSelector';
 import KlasikTombala from '../components/KlasikTombala';
 import IlkKapanin from '../components/IlkKapanin';
 import IlkKapaninLobby from '../components/IlkKapaninLobby';
+import Snackbar from '@mui/material/Snackbar';
 
 export default function Oyun() {
   const [gameMode, setGameMode] = useState(null);
   const [playType, setPlayType] = useState(null);
   const [showGame, setShowGame] = useState(false);
   const navigate = useNavigate();
+  const [toastMsg, setToastMsg] = useState('');
+  const [toastOpen, setToastOpen] = useState(false);
+  const audioRef = useRef(null);
+  const originalTitle = useRef(document.title);
+  const lastToastMsg = useRef('');
 
   const isReady = gameMode && playType;
 
   const logoBig = 700;
   const logoSmall = 240;
+
+  // Bildirim fonksiyonu
+  const notify = ({ message, playSound = false, changeTitle = false, showToast = false }) => {
+    if (changeTitle) {
+      document.title = message;
+      setTimeout(() => {
+        document.title = originalTitle.current;
+      }, 3000);
+    }
+    if (playSound && audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play();
+    }
+    if (showToast) {
+      // Aynı mesaj tekrar tekrar gösterilmesin
+      if (lastToastMsg.current !== message) {
+        setToastMsg(message);
+        setToastOpen(true);
+        lastToastMsg.current = message;
+      }
+    }
+  };
+
+  // Örnek bildirim tetikleyici (gerçek olaylarda çağrılmalı)
+  const handleExampleNotification = (type) => {
+    const isTabActive = !document.hidden;
+    const message = {
+      invite: 'Oyun daveti aldınız!',
+      event: 'Etkinlik başladı!',
+      turn: 'Sıra sizde!',
+      lobby: 'Lobiye biri katıldı!',
+    }[type];
+    notify({
+      message,
+      playSound: !isTabActive,
+      changeTitle: !isTabActive,
+      showToast: isTabActive,
+    });
+  };
 
   return (
     <Fade in={true} timeout={1000}>
@@ -212,11 +257,11 @@ export default function Oyun() {
               </Typography>
             </Box>
             {gameMode === 'klasik' && playType && (
-              <KlasikTombala playType={playType} />
+              <KlasikTombala playType={playType} notify={notify} />
             )}
             {gameMode === 'ilkKapanin' && playType && (
               playType === 'lobby' ? (
-                <IlkKapaninLobby />
+                <IlkKapaninLobby notify={notify} />
               ) : (
                 <IlkKapanin playType={playType} />
               )
@@ -243,6 +288,15 @@ export default function Oyun() {
             </Button>
           </Box>
         )}
+
+        <audio ref={audioRef} src={process.env.NODE_ENV === 'development' ? '/public/images/notify.mp3' : '/images/notify.mp3'} preload="auto" />
+        <Snackbar
+          open={toastOpen}
+          autoHideDuration={3000}
+          onClose={() => setToastOpen(false)}
+          message={toastMsg}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        />
       </Box>
     </Fade>
   );
