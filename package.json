@@ -8,16 +8,26 @@
     "@mui/icons-material": "^7.0.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "ws": "^8.18.1"
+    "ws": "^8.18.1",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/material": "^7.0.1",
+    "dayjs": "^1.11.13",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^6.30.0"
   },
   "devDependencies": {
-    "lerna": "^8.2.0"
+    "lerna": "^8.2.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.2.4"
   },
   "scripts": {
     "start": "npm --prefix packages/oyun-merkezi start",
-    "build": "npm --prefix packages/oyun-merkezi run build",
+    "build": "cd packages/oyun-merkezi && npm run build",
     "dev": "npm --prefix packages/oyun-merkezi start",
     "server": "node server.js",
-    "production": "npm run build && node server.js"
+    "render-build": "npm install && cd packages/oyun-merkezi && npm install && npm run build",
+    "render-start": "node server.js"
   }
 }
