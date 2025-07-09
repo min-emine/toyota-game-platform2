@@ -769,7 +769,7 @@ app.get('/api/users', (req, res) => {
     res.status(404).json({ error: 'users.json not found' });
   }
 });
-const PORT = 3003;
-server.listen(PORT, 'localhost', () => { 
-  console.log(`Server is running on http://localhost:${PORT}`);
+const PORT = process.env.PORT || 3003;
+server.listen(PORT, '0.0.0.0', () => { 
+  console.log(`Server is running on port ${PORT}`);
 });
