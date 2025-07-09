@@ -14,6 +14,10 @@
     "lerna": "^8.2.0"
   },
   "scripts": {
-    "start": "npm --prefix packages/oyun-merkezi start"
+    "start": "npm --prefix packages/oyun-merkezi start",
+    "build": "npm --prefix packages/oyun-merkezi run build",
+    "dev": "npm --prefix packages/oyun-merkezi start",
+    "server": "node server.js",
+    "production": "npm run build && node server.js"
   }
 }
