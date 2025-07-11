@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Grow, Grid, Snackbar } from '@mui/material';
+import { API_BASE_URL, WS_URL } from '../config';
 
 const fetchUserLobbies = async (userId) => [
   { code: 'ABC123', name: 'Aile Lobisi' },
@@ -59,7 +60,7 @@ export default function KlasikTombala({ playType, notify }) {
     const fetchUserLobbies = async () => {
       try {
         const userId = localStorage.getItem('userId');
-        const response = await fetch('http://localhost:3003/lobbies');
+        const response = await fetch(`${API_BASE_URL}/lobbies`);
         const data = await response.json();
         const lobbies = Object.entries(data)
           .filter(([code, lobby]) => (lobby.participants || []).includes(userId))
@@ -75,7 +76,7 @@ export default function KlasikTombala({ playType, notify }) {
   const handleLobbySelect = async (lobbyCode) => {
     setSelectedLobby(lobbyCode);
     try {
-      const response = await fetch('http://localhost:3003/lobbies');
+      const response = await fetch(`${API_BASE_URL}/lobbies`);
       const data = await response.json();
       const lobby = data[lobbyCode];
       const participants = lobby?.participants || [];
@@ -126,7 +127,7 @@ export default function KlasikTombala({ playType, notify }) {
   useEffect(() => {
     if (playType === 'lobby' && selectedLobby && lobbyUsers.length > 0) {
       const userId = localStorage.getItem('userId');
-      const ws = new window.WebSocket('ws://localhost:3003');
+      const ws = new window.WebSocket(WS_URL);
       ws.onopen = () => {
         ws.send(JSON.stringify({ type: 'join-lobby', lobbyCode: selectedLobby, userId }));
       };

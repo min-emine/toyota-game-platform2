@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from './config';
 import AppTheme from '../shared-theme/AppTheme';
 import {
   AppBar,
@@ -72,7 +73,7 @@ export default function Home() {
   useEffect(() => {
     const fetchLobbies = async () => {
       try {
-        const response = await fetch('http://localhost:3003/lobbies');
+        const response = await fetch(`${API_BASE_URL}/lobbies`);
         const data = await response.json();
         const lobbiesWithParticipants = Object.entries(data).map(([code, lobby]) => ({
           code,
@@ -137,7 +138,7 @@ export default function Home() {
       return;
     }
     try {
-      const response = await fetch('http://localhost:3003/create-lobby', {
+      const response = await fetch(`${API_BASE_URL}/create-lobby`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -180,7 +181,7 @@ export default function Home() {
       return;
     }
     try {
-      const response = await fetch('http://localhost:3003/join-lobby', {
+      const response = await fetch(`${API_BASE_URL}/join-lobby`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lobbyCode: joinLobbyCode, userId }),
@@ -201,7 +202,7 @@ export default function Home() {
   const handleLeaveLobby = async (lobbyCode) => {
     if (!window.confirm('Lobiden çıkmak istiyor musunuz?')) return;
     try {
-      const response = await fetch('http://localhost:3003/leave-lobby', {
+      const response = await fetch(`${API_BASE_URL}/leave-lobby`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lobbyCode, userId }),
@@ -745,7 +746,7 @@ export default function Home() {
             <Button onClick={() => setDeleteDialogOpen(false)}>İptal</Button>
             <Button color="error" onClick={async () => {
               if (!lobbyToDelete) return;
-              const res = await fetch('http://localhost:3003/delete-lobby', {
+              const res = await fetch(`${API_BASE_URL}/delete-lobby`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ lobbyCode: lobbyToDelete.code, userId }),

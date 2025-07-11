@@ -1,37 +1,26 @@
 {
-  "XUUHPK": {
-    "name": "ablanın lobisi",
-    "createdAt": 1751540318906,
-    "participants": [
-      "f14fa50ad7f42499",
-      "dc963d57d31f2971",
-      "7a7c52b216e82966"
-    ]
-  },
-  "241QZI": {
-    "name": "babanın lobisi",
+  "0145DP": {
+    "name": "lobi1",
     "type": "normal",
-    "password": "12345",
     "gameId": 1,
-    "ownerId": "dc963d57d31f2971",
-    "createdAt": 1751544266987,
+    "ownerId": "ffdee13f99eaf55b",
+    "createdAt": 1752085440173,
     "participants": [
-      "dc963d57d31f2971",
-      "f14fa50ad7f42499",
-      "f61b3e1efb5442ea"
+      "ffdee13f99eaf55b",
+      "7860022e3034e783"
     ],
     "closedAt": null
   },
-  "DCTOWW": {
-    "name": "etkinlik",
+  "XX7V2T": {
+    "name": "lobia",
     "type": "event",
-    "eventStart": "2025-07-03T15:55",
-    "eventEnd": "2025-07-03T16:55",
+    "eventStart": "2025-07-11T23:08",
+    "eventEnd": "2025-07-13T21:09",
     "gameId": 1,
-    "ownerId": "f14fa50ad7f42499",
-    "createdAt": 1751547348455,
+    "ownerId": "9f957b4de7f05040",
+    "createdAt": 1752257350239,
     "participants": [
-      "f14fa50ad7f42499"
+      "9f957b4de7f05040"
     ],
     "closedAt": null
   }

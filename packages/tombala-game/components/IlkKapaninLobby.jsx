@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Box, Typography, Button, Grid, Avatar, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Badge } from '@mui/material';
 import { Close as CloseIcon, ChatBubbleOutline as ChatBubbleOutlineIcon, Remove as RemoveIcon } from '@mui/icons-material';
+import { API_BASE_URL, WS_URL } from '../config';
 
 function generateRandomCard() {
   const numbers = new Set();
@@ -51,7 +52,7 @@ export default function IlkKapaninLobby({ notify }) {
   useEffect(() => {
     const fetchUserLobbies = async () => {
       try {
-        const response = await fetch('http://localhost:3003/lobbies');
+        const response = await fetch(`${API_BASE_URL}/lobbies`);
         const data = await response.json();
         const lobbies = Object.entries(data)
           .filter(([code, lobby]) => (lobby.participants || []).includes(userId))
@@ -67,7 +68,7 @@ export default function IlkKapaninLobby({ notify }) {
   const handleLobbySelect = async (lobbyCode) => {
     setSelectedLobby(lobbyCode);
     try {
-      const response = await fetch('http://localhost:3003/lobbies');
+      const response = await fetch(`${API_BASE_URL}/lobbies`);
       const data = await response.json();
       const lobby = data[lobbyCode];
       const participants = lobby?.participants || [];
@@ -120,7 +121,7 @@ export default function IlkKapaninLobby({ notify }) {
   useEffect(() => {
     if (!selectedLobby) return;
     if (wsRef.current) wsRef.current.close();
-    const ws = new WebSocket('ws://localhost:3003');
+    const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: 'join-lobby', lobbyCode: selectedLobby, userId, mode: 'ilkKapanin' }));

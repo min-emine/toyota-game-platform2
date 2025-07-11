@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Button, ButtonGroup, TextField, Typography, Container, CssBaseline, Avatar, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from './config';
 import AppTheme from '../shared-theme/AppTheme';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
@@ -36,7 +37,7 @@ export default function Login() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const endpoint = mode === 'signIn' ? 'http://localhost:3003/login' : 'http://localhost:3003/register';
+    const endpoint = mode === 'signIn' ? `${API_BASE_URL}/login` : `${API_BASE_URL}/register`;
     if (!email || !password || (mode === 'signUp' && (!confirmPassword || !username))) {
       setError('Lütfen tüm alanları doldurun.');
       return;
@@ -89,7 +90,7 @@ export default function Login() {
     setMode('signIn');
 
     try {
-      const response = await fetch('http://localhost:3003/login', {
+      const response = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email, password: user.password }),
